@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRightLeftIcon, Loader2, MinusIcon, PlusIcon } from "lucide-react";
+import { Loader2, PlusIcon } from "lucide-react";
 import { ScrollArea, ScrollBar } from "../../ui/scroll-area";
 import { Button } from "../../ui/Button";
 import {
@@ -25,7 +25,7 @@ export default function Pools() {
   const [isLoading, setIsLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
-  const [selectedTab, setSelectedTab] = useState("swap");
+  const [selectedTab, setSelectedTab] = useState<"swap"|"add"|"remove">("swap");
   const [poolData, setPoolData] = useState<Pool[]>([]);
   const router = useRouter();
   const limitPool = 3;
@@ -34,214 +34,146 @@ export default function Pools() {
     router.push(`/tracker`);
   };
 
-  const onOpenSwap = () => {
+  const openDialog = (tab: "swap"|"add"|"remove") => {
+    setSelectedTab(tab);
     setShowDialog(true);
-    setSelectedTab("swap");
-  };
-
-  const onOpenAddLiquidity = () => {
-    setShowDialog(true);
-    setSelectedTab("add");
-  };
-
-  const onOpenRemoveLiquidity = () => {
-    setShowDialog(true);
-    setSelectedTab("remove");
   };
 
   useEffect(() => {
     const fetchPools = async () => {
-      const url = `${process.env.NEXT_PUBLIC_TRACKIT_API_HOST}/yield/pools?chain=${selectedChain}&limit=${limitPool}`;
+      setIsLoading(true);
       try {
-        const response = await axios.get(url);
-
-        if (response.status === 200) {
-          console.log("Fetch pools : ", response)
-          if (response.data) {                    
-            setPoolData(() => [...response.data]);
-          } else {
-            console.log("API response data is empty.");
-          }
-        } else {
-          console.log("Failed to fetch data: ", response.status);
-        }
-      } catch (error) {
-        console.log("Error fetching pools:", error);
+        const { data, status } = await axios.get<Pool[]>(
+          `${process.env.NEXT_PUBLIC_TRACKIT_API_HOST}/yield/pools`,
+          { params: { chain: selectedChain, limit: limitPool } }
+        );
+        if (status === 200) setPoolData(data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsLoading(false);
       }
     };
-
     fetchPools();
   }, [selectedChain]);
 
   return (
-    <div className="w-full flex justify-center">
-      <div className="flex-1 max-w-5xl overflow-hidden">
-        <ScrollArea className="w-full h-full">
-          <Table className="table bg">
-            {isLoading && (
-              <TableBody>
-                {[...Array(14)].map((_, index) => (
-                  <LoadingRow key={index} />
-                ))}
-              </TableBody>
-            )}
-            {!isLoading && (
-              <>
-                <TableHeader className="sticky top-0 z-50 bg">
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead className="sticky left-0 z-20 bg-[#0e203f] min-w-32 text-gray-400 font-medium">
-                      Pool
-                    </TableHead>
-                    <TableHead className="min-w-32 text-gray-400 font-medium">
-                      TVL
-                    </TableHead>
-                    <TableHead className="min-w-32 text-gray-400 font-medium">
-                      APR
-                    </TableHead>
-                    <TableHead className="min-w-28 text-gray-400 font-medium">
-                      Add liquid.
-                    </TableHead>
-                    <TableHead className="min-w-28 text-gray-400 font-medium">
-                      Remove liquid.
-                    </TableHead>
-                    <TableHead className="min-w-28 text-gray-400 font-medium">
-                      Swap
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
+    <div className="w-full flex justify-center px-2">
+      <div className="flex-1 max-w-5xl">
+        {/* Desktop Table */}
+        <div className="hidden md:block">
+          <ScrollArea className="w-full h-full">
+            <Table className="table-auto bg-transparent">
+              {isLoading ? (
                 <TableBody>
-                  {poolData.length === 0 &&
-                    [...Array(1)].map((_, index) => (
-                      <TableRow
-                        key={index}
-                        className="hover:bg-blue-900 transition-colors duration-150 group"
-                      >
-                        <TableCell className="sticky left-0 z-20 bg-[#0e203f] group-hover:bg-blue-900 transition-colors duration-150">
-                          SUI/USDC
-                        </TableCell>
-                        <TableCell>-</TableCell>
-                        <TableCell>-</TableCell>
-                        <TableCell>
-                          <Button
-                            size="sm"
-                            className="px-5 flex items-center bg-transparent hover:bg-bluesky text-bluesky hover:text-gray-50 border border-bluesky"
-                            onClick={onOpenAddLiquidity}
-                          >
-                            <PlusIcon />
-                            <span className="text-[15px] font-medium">Add</span>
-                          </Button>
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            size="sm"
-                            className="px-5 flex items-center bg-transparent hover:bg-bluesky text-bluesky hover:text-gray-50 border border-bluesky"
-                            onClick={onOpenRemoveLiquidity}
-                          >
-                            <MinusIcon />
-                            <span className="text-[15px] font-medium">
-                              Remove
-                            </span>
-                          </Button>
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            size="sm"
-                            className="px-5 flex items-center bg-transparent hover:bg-bluesky text-bluesky hover:text-gray-50 border border-bluesky"
-                            onClick={onOpenSwap}
-                          >
-                            <ArrowRightLeftIcon />
-                            <span className="text-[15px] font-medium">
-                              Swap
-                            </span>
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  {poolData.length > 0 &&
-                    poolData.map((item, index) => (
-                      <TableRow
-                        key={index}
-                        className="hover:bg-blue-900 transition-colors duration-150 group"
-                        onClick={clickHandler}
-                      >
-                        <TableCell className="sticky left-0 z-20 bg-[#0e203f] group-hover:bg-blue-900 transition-colors duration-150">
-                          {item.pool?.symbol || "N/A"}
-                        </TableCell>
-                        <TableCell>
-                          ${formatVolume(item.pool?.tvl) || "-"}
-                        </TableCell>
-                        <TableCell>{item.pool.apr.toFixed(3)}%</TableCell>
-                        <TableCell>
-                          <Button
-                            size="sm"
-                            className="px-5 flex items-center bg-transparent hover:bg-bluesky text-[#8899A8] hover:text-gray-50 border border-bluesky"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onOpenAddLiquidity();
-                            }}
-                          >
-                            <PlusIcon />
-                            <span className="text-[15px] font-medium">Add</span>
-                          </Button>
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            size="sm"
-                            className="px-5 flex items-center bg-transparent hover:bg-bluesky text-[#8899A8] hover:text-gray-50 border border-bluesky"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onOpenRemoveLiquidity();
-                            }}
-                          >
-                            <MinusIcon />
-                            <span className="text-[15px] font-medium">
-                              Remove
-                            </span>
-                          </Button>
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            size="sm"
-                            className="px-5 flex items-center bg-transparent hover:bg-bluesky text-[#8899A8] hover:text-gray-50 border border-bluesky"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onOpenSwap();
-                            }}
-                          >
-                            <ArrowRightLeftIcon />
-                            <span className="text-[15px] font-medium">
-                              Swap
-                            </span>
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                  {[...Array(5)].map((_, i) => <LoadingRow key={i} />)}
                 </TableBody>
-              </>
-            )}
-          </Table>
-
-          <ScrollBar orientation="horizontal" />
-          <div className="hidden md:flex justify-center items-center p-4 w-full bg border-t border-[#132D5B]">
+              ) : (
+                <>
+                  <TableHeader className="sticky top-0 bg-[#0e203f]">
+                    <TableRow>
+                      <TableHead className="sticky left-0 bg-[#0e203f]">Pool</TableHead>
+                      <TableHead>TVL</TableHead>
+                      <TableHead>APR</TableHead>
+                      <TableHead>Invest</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {poolData.length
+                      ? poolData.map((item, idx) => (
+                          <TableRow key={idx} onClick={clickHandler} className="group hover:bg-blue-900">
+                            <TableCell className="sticky left-0 bg-[#0e203f]">
+                              {item.pool?.symbol || "N/A"}
+                            </TableCell>
+                            <TableCell>${formatVolume(item.pool?.tvl) || "-"}</TableCell>
+                            <TableCell>{item.pool.apr.toFixed(3)}%</TableCell>
+                            <TableCell>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="flex items-center"
+                                onClick={e => { e.stopPropagation(); openDialog("add"); }}
+                              >
+                                <PlusIcon className="mr-1" /> Invest
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      : (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-4">No pools found</TableCell>
+                        </TableRow>
+                      )}
+                  </TableBody>
+                </>
+              )}
+            </Table>
+            <ScrollBar orientation="horizontal" />
             {hasMore && (
+              <div className="flex justify-center p-4 border-t border-[#132D5B]">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  disabled={isLoading}
+                  onClick={() => {/* load more logic */}}
+                >
+                  {isLoading
+                    ? <><Loader2 className="animate-spin mr-2" />Loading...</>
+                    : "Load More"}
+                </Button>
+              </div>
+            )}
+          </ScrollArea>
+        </div>
+
+        {/* Mobile Cards */}
+        <div className="md:hidden space-y-4">
+          {isLoading
+            ? [...Array(3)].map((_, i) => (
+                <div key={i} className="animate-pulse bg-[#0e203f] rounded-lg h-24" />
+              ))
+            : poolData.map((item, idx) => (
+                <div
+                  key={idx}
+                  onClick={clickHandler}
+                  className="bg-[#0e203f] rounded-lg p-4 shadow flex flex-col"
+                >
+                  <div className="flex justify-between mb-2">
+                    <span className="font-semibold">{item.pool?.symbol}</span>
+                    <span className="text-sm">{item.pool.apr.toFixed(2)}%</span>
+                  </div>
+                  <div className="flex justify-between mb-3">
+                    <span className="text-sm text-gray-400">TVL</span>
+                    <span className="text-sm">${formatVolume(item.pool?.tvl)}</span>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="px-4 py-2 self-end bg-gray-800 hover:bg-gray-700 text-white border border-gray-700"
+                    onClick={e => { e.stopPropagation(); openDialog("add"); }}
+                  >
+                    <PlusIcon className="mr-1" /> Invest
+                  </Button>
+                </div>
+              ))
+          }
+
+          {hasMore && (
+            <div className="flex justify-center">
               <Button
                 variant="outline"
                 size="lg"
+                className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white border border-gray-700"
                 disabled={isLoading}
-                className="bg-blue-950 hover:bg-blue-900 text-gray-100 hover:text-gray-100 border-gray-700"
+                onClick={() => {/* load more logic */}}
               >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Loading...
-                  </>
-                ) : (
-                  "Load More"
-                )}
+                {isLoading
+                  ? <><Loader2 className="animate-spin mr-2" />Loading...</>
+                  : "Load More"}
               </Button>
-            )}
-          </div>
-        </ScrollArea>
+            </div>
+          )}
+        </div>
       </div>
 
       <OperationDialog
@@ -249,24 +181,6 @@ export default function Pools() {
         onOpenChange={setShowDialog}
         initialTab={selectedTab}
       />
-
-      {hasMore && (
-        <Button
-          variant="outline"
-          size="lg"
-          disabled={isLoading}
-          className="md:hidden bg-blue-950 hover:bg-blue-900 text-gray-100 hover:text-gray-100 border-gray-700"
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Loading...
-            </>
-          ) : (
-            "Load More"
-          )}
-        </Button>
-      )}
     </div>
   );
 }
