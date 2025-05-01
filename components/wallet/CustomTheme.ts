@@ -1,33 +1,32 @@
 import { ThemeVars } from "@mysten/dapp-kit";
 
-// Custom theme copied from dapp-kit
 export const customTheme: ThemeVars = {
   blurs: {
     modalOverlay: "blur(0)",
   },
   backgroundColors: {
-    primaryButton: "#F6F7F9",
-    primaryButtonHover: "#F0F2F5",
-    outlineButtonHover: "#F4F4F5",
+    primaryButton: "#132d5b",            // Dark base color
+    primaryButtonHover: "#1a3c73",       // Slightly lighter on hover
+    outlineButtonHover: "#1a3c73",
     modalOverlay: "rgba(24 36 53 / 20%)",
-    modalPrimary: "white",
-    modalSecondary: "#F7F8F8",
+    modalPrimary: "#0e203f",             // Dark modal background
+    modalSecondary: "#132d5b",           // Consistent dark section
     iconButton: "transparent",
-    iconButtonHover: "#F0F1F2",
-    dropdownMenu: "#FFFFFF",
-    dropdownMenuSeparator: "#F3F6F8",
-    walletItemSelected: "white",
-    walletItemHover: "#3C424226",
+    iconButtonHover: "#1a3c73",
+    dropdownMenu: "#1a1e2e",             // Dark dropdown background
+    dropdownMenuSeparator: "#2c3545",
+    walletItemSelected: "#1a3c73",
+    walletItemHover: "#264570",
   },
   borderColors: {
-    outlineButton: "#E4E4E7",
+    outlineButton: "#3b4a60",            // Match darker borders
   },
   colors: {
-    primaryButton: "#fff",
-    outlineButton: "#373737",
-    iconButton: "#000000",
-    body: "#182435",
-    bodyMuted: "#767A81",
+    primaryButton: "#ffffff",            // White text on dark button
+    outlineButton: "#ffffff",            // Outline text color
+    iconButton: "#ffffff",               // Icon color
+    body: "#d1d5db",                     // Light gray for body text
+    bodyMuted: "#9ca3af",                // Muted text
     bodyDanger: "#FF794B",
   },
   radii: {
@@ -37,8 +36,8 @@ export const customTheme: ThemeVars = {
     xlarge: "16px",
   },
   shadows: {
-    primaryButton: "0px 4px 12px rgba(0, 0, 0, 0.1)",
-    walletItemSelected: "0px 2px 6px rgba(0, 0, 0, 0.05)",
+    primaryButton: "0px 4px 12px rgba(0, 0, 0, 0.3)",
+    walletItemSelected: "0px 2px 6px rgba(0, 0, 0, 0.2)",
   },
   fontWeights: {
     normal: "400",

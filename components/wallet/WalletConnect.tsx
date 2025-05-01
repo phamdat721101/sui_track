@@ -18,10 +18,10 @@ export function CustomBtn() {
     return (
       <Button
         variant="outline"
-        className="w-full mt-2 md:mt-0 md:w-40 md:inline-flex gradient-bg text-white"
+        className="w-full mt-2 md:mt-0 md:w-40 md:inline-flex bg-[#132d5b] hover:bg-[#1a3c73] text-white border border-[#3b4a60]"
         onClick={() => disconnect()}
       >
-        <Wallet className="mr-2 h-4 w-4" />
+        <Wallet className="mr-2 h-4 w-4 text-white" />
         {formatAddress(currentAccount.address)}
       </Button>
     );
@@ -29,8 +29,8 @@ export function CustomBtn() {
   return (
     <ConnectModal
       trigger={
-        <Button className="w-full mt-2 md:mt-0 md:w-40 md:inline-flex gradient-bg">
-          <Wallet className="mr-2 h-4 w-4" />
+        <Button className="w-full mt-2 md:mt-0 md:w-40 md:inline-flex bg-[#132d5b] hover:bg-[#1a3c73] text-white border border-[#3b4a60]">
+          <Wallet className="mr-2 h-4 w-4 text-white" />
           Connect Wallet
         </Button>
       }

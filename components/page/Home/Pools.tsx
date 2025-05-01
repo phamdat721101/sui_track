@@ -17,8 +17,12 @@ import { formatVolume } from "../../../types/helper";
 import OperationDialog from "./OperationDialog";
 import GlobalContext from "../../../context/store";
 import axios from "axios";
-import { Pool } from "../../../types/interface";
+import { Pool, TokenInfoSui } from "../../../types/interface";
 import { useRouter } from "next/navigation";
+
+// Sui wallet integration imports
+import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
+import { Transaction } from '@mysten/sui/transactions';
 
 export default function Pools() {
   const { selectedChain } = useContext(GlobalContext);
@@ -30,6 +34,10 @@ export default function Pools() {
   const router = useRouter();
   const limitPool = 3;
 
+  // Sui wallet hooks
+  const currentAccount = useCurrentAccount();
+  const { mutateAsync: signAndExecuteTransactionBlock } = useSignAndExecuteTransaction();
+
   const clickHandler = () => {
     router.push(`/tracker`);
   };
@@ -37,6 +45,35 @@ export default function Pools() {
   const openDialog = (tab: "swap"|"add"|"remove") => {
     setSelectedTab(tab);
     setShowDialog(true);
+  };
+
+  const handleInvest = async (token: any) => {
+    if (!currentAccount) {
+      alert('Please connect your wallet');
+      return;
+    }
+    try {
+      // Build a transaction block to buy token (modify with actual DEX calls)
+      const txb = new Transaction();
+      // Example: Swap 0.01 SUI for token via router (replace address and module)
+      // const coins = txb.splitCoins(txb.gas, [txb.pure(10_000_000_000)]); // 0.01 SUI in MIST
+      // txb.moveCall({
+      //   target: '0xROUTER_ADDRESS::router::swap_sui_for_tokens',
+      //   arguments: [coins, txb.pure(token.token_type)],
+      // });
+
+      // For now, just send a transfer of dust SUI to yourself as demo
+      txb.transferObjects([txb.splitCoins(txb.gas, [txb.pure.u64(1000)])], currentAccount.address);
+
+      const result = await signAndExecuteTransactionBlock({
+        transaction: txb,
+      });
+      console.log('invest transaction result:', result);
+      alert('Transaction submitted: ' + result.digest);
+    } catch (err) {
+      console.error('Buy transaction failed:', err);
+      alert('Transaction failed: ' + err);
+    }
   };
 
   useEffect(() => {
@@ -90,9 +127,8 @@ export default function Pools() {
                             <TableCell>
                               <Button
                                 size="sm"
-                                variant="outline"
-                                className="flex items-center"
-                                onClick={e => { e.stopPropagation(); openDialog("add"); }}
+                                className="flex items-center bg-[#132d5b] text-white border border-gray-700 hover:bg-[#1a3c73]"
+                                onClick={e => { e.stopPropagation(); handleInvest(item); }}
                               >
                                 <PlusIcon className="mr-1" /> Invest
                               </Button>
@@ -112,7 +148,7 @@ export default function Pools() {
             {hasMore && (
               <div className="flex justify-center p-4 border-t border-[#132D5B]">
                 <Button
-                  variant="outline"
+                  className="bg-[#132d5b] text-white border border-gray-700 hover:bg-[#1a3c73]"
                   size="lg"
                   disabled={isLoading}
                   onClick={() => {/* load more logic */}}
