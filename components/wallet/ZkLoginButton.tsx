@@ -32,8 +32,6 @@ function shortenAddress(addr: string) {
 export function ZkLoginButton() {
     const [address, setAddress] = useState<string|null>(null);
     const [copied, setCopied] = useState(false);
-    console.log("redirect uri: ", process.env.NEXT_PUBLIC_REDIRECT_URI, " -g: ", process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID)
-
 
     // 1️⃣ On click, generate ephemeral keypair & nonce
     const startLogin = () => {

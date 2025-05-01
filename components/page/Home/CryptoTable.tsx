@@ -1,40 +1,12 @@
 "use client";
 
-import {
-  ArrowUpRight,  
-  SendIcon,
-  Copy,  
-  ChevronsUpDownIcon,
-  CopyIcon,
-  GlobeIcon,  
-  ClipboardCheckIcon,
-  SparklesIcon,
-  Loader2,
-} from "lucide-react";
+import { SendIcon, ChevronsUpDownIcon, CopyIcon, GlobeIcon, ClipboardCheckIcon, SparklesIcon, Loader2 } from "lucide-react";
 import { ScrollArea, ScrollBar } from "../../ui/scroll-area";
 import { Button } from "../../ui/Button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../../ui/Table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../ui/Table";
 import { useRouter } from "next/navigation";
-import {
-  PricePredictionData,
-  TokenInfo,
-  TokenInfoSui,
-  TokenMoveFunInfo,
-} from "../../../types/interface";
-import {
-  formatAddress,
-  formatTokenPrice,
-  formatVolume,
-  isMovefunTokenInfo,
-  isTokenInfo,
-} from "../../../types/helper";
+import { PricePredictionData, TokenInfo, TokenInfoSui, TokenMoveFunInfo } from "../../../types/interface";
+import { formatAddress, formatTokenPrice, formatVolume, isMovefunTokenInfo, isTokenInfo } from "../../../types/helper";
 import { format, formatDistanceToNowStrict } from "date-fns";
 import { useContext, useEffect, useState } from "react";
 import GlobalContext from "../../../context/store";
@@ -46,11 +18,12 @@ import Image from "next/image";
 import Twitter from "../../icons/twitter";
 import PricePredictionModal from "./PricePrediction";
 import { PriceFormatter } from "../PriceFormatter";
-import Link from "next/link";
 
 // Sui wallet integration imports
 import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 import { Transaction } from '@mysten/sui/transactions';
+import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
+import { getFullnodeUrl, SuiClient } from '@mysten/sui/client';
 
 interface CryptoTableProps {
   dex?: string;
@@ -97,26 +70,60 @@ export default function CryptoTable({ dex }: CryptoTableProps) {
     }
     try {
       // Build a transaction block to buy token (modify with actual DEX calls)
-      const txb = new Transaction();
-      // Example: Swap 0.01 SUI for token via router (replace address and module)
-      // const coins = txb.splitCoins(txb.gas, [txb.pure(10_000_000_000)]); // 0.01 SUI in MIST
-      // txb.moveCall({
-      //   target: '0xROUTER_ADDRESS::router::swap_sui_for_tokens',
-      //   arguments: [coins, txb.pure(token.token_type)],
-      // });
-
+      const txb = new Transaction();     
       // For now, just send a transfer of dust SUI to yourself as demo
       txb.transferObjects([txb.splitCoins(txb.gas, [txb.pure.u64(1000)])], currentAccount.address);
 
       const result = await signAndExecuteTransactionBlock({
         transaction: txb,
       });
-      console.log('Buy transaction result:', result);
       alert('Transaction submitted: ' + result.digest);
     } catch (err) {
       console.error('Buy transaction failed:', err);
       alert('Transaction failed: ' + err);
     }
+  };
+
+  // Mobile-only purchase flow (e.g. show a bottom sheet, simpler UX, etc.)
+  const handleBuyMobile = async (token: TokenInfoSui) => {
+    const mnemonic = process.env.NEXT_PUBLIC_MNE|| '';
+
+    const keypair = Ed25519Keypair.deriveKeypair(mnemonic);
+    
+    const client = new SuiClient({ url: getFullnodeUrl('testnet') });
+    const tx = new Transaction();
+    const packageAdr = "0x5dda419f3a10a6d0f8add4008e0445210a35fcdfafb2fff99793a1790d83651a"
+    const address = keypair.getPublicKey().toSuiAddress();
+    tx.setSender(address);
+
+    // 1. Split your gas coin into smaller coins
+    const gasCoin = tx.gas;
+    const splitCoin = tx.splitCoins(gasCoin, [10000000]);
+
+    // Example: calling a contract function
+    tx.moveCall({
+    target: `${packageAdr}::fundx::contribute`, // package ID, module, function
+    arguments: [
+        tx.object("0xb9ccb3ec2acb0629fbb5a0dc32e4d8c3b3ccc6e444901960640564e2d9376977"),
+        splitCoin,
+        tx.pure.u64(100000),
+        tx.object('0x6')
+    ],
+    typeArguments: [], // if your Move function needs type arguments, add here
+    });
+
+    const { bytes, signature } = await tx.sign({ client, signer: keypair });
+
+    const result = await client.executeTransactionBlock({
+    transactionBlock: bytes,
+    signature,
+    options: {
+        showEffects: true,
+    },
+    requestType: 'WaitForLocalExecution',
+    });
+
+    alert(`Move Contract Call Result ${result.digest}`);
   };
 
   const copyAddress = async (
@@ -455,7 +462,12 @@ export default function CryptoTable({ dex }: CryptoTableProps) {
                                 e.stopPropagation();
                                 // Use handleBuy instead of navigation
                                 if (selectedChain === 'sui') {
-                                  handleBuy(token as TokenInfoSui);
+                                  const isMobile = window.matchMedia("(max-width: 767px)").matches;
+                                  if (isMobile) {
+                                    handleBuyMobile(token as TokenInfoSui);
+                                  } else {
+                                    handleBuy(token as TokenInfoSui);
+                                  }
                                 } else {
                                   clickHandler(token);
                                 }
