@@ -35,7 +35,6 @@ import {
   SidebarMenu,
   SidebarGroup,
   SidebarSeparator,
-  SidebarHeader,
 } from "../../ui/sidebar";
 import { VisuallyHidden, Root } from "@radix-ui/react-visually-hidden";
 import Image from "next/image";
