@@ -9,7 +9,7 @@ import { sha256 } from "js-sha256";
 
 const FULLNODE_URL = 'https://fullnode.devnet.sui.io';
 const suiClient = new SuiClient({url: FULLNODE_URL});
-const { epoch, epochDurationMs, epochStartTimestampMs } = await suiClient.getLatestSuiSystemState();
+const { epoch } = await suiClient.getLatestSuiSystemState();
 const maxEpoch = Number(epoch) + 2; // this means the ephemeral key will be active for 2 epochs from now.
 const ephemeralKeyPair = new Ed25519Keypair();
 const randomness = generateRandomness();
@@ -32,6 +32,8 @@ function shortenAddress(addr: string) {
 export function ZkLoginButton() {
     const [address, setAddress] = useState<string|null>(null);
     const [copied, setCopied] = useState(false);
+    console.log("redirect uri: ", process.env.NEXT_PUBLIC_REDIRECT_URI, " -g: ", process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID)
+
 
     // 1️⃣ On click, generate ephemeral keypair & nonce
     const startLogin = () => {
@@ -39,11 +41,11 @@ export function ZkLoginButton() {
         const publicKey = keypair.getPublicKey().toBase64();
         const nonce = btoa(publicKey);                    // Simple nonce strategy
 
-        const REDIRECT_URI = process.env.REDIRECT_URI || "http://localhost:3000";
+        const redirect_uri = process.env.NEXT_PUBLIC_REDIRECT_URI || "";
         const params = new URLSearchParams({
             // Configure client ID and redirect URI with an OpenID provider
             client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||'',
-            redirect_uri: REDIRECT_URI,
+            redirect_uri: redirect_uri,
             response_type: 'id_token',
             scope: 'openid',
             nonce: nonce
