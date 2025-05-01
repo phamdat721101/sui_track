@@ -47,6 +47,7 @@ export default function CryptoTable({ dex }: CryptoTableProps) {
   const [pricePrediction, setPricePrediction] =
     useState<PricePredictionData | null>(null);
   const itemsPerPage = 10;
+  const [txDigest, setTxDigest] = useState<string | null>(null);
 
   // Sui wallet hooks
   const currentAccount = useCurrentAccount();
@@ -86,44 +87,39 @@ export default function CryptoTable({ dex }: CryptoTableProps) {
 
   // Mobile-only purchase flow (e.g. show a bottom sheet, simpler UX, etc.)
   const handleBuyMobile = async (token: TokenInfoSui) => {
-    const mnemonic = process.env.NEXT_PUBLIC_MNE|| '';
-
+    const mnemonic = process.env.NEXT_PUBLIC_MNE || '';
     const keypair = Ed25519Keypair.deriveKeypair(mnemonic);
-    
     const client = new SuiClient({ url: getFullnodeUrl('testnet') });
     const tx = new Transaction();
-    const packageAdr = "0x5dda419f3a10a6d0f8add4008e0445210a35fcdfafb2fff99793a1790d83651a"
+
+    const packageAdr = "0x5dda419f3a10a6d0f8add4008e0445210a35fcdfafb2fff99793a1790d83651a";
     const address = keypair.getPublicKey().toSuiAddress();
     tx.setSender(address);
 
-    // 1. Split your gas coin into smaller coins
     const gasCoin = tx.gas;
     const splitCoin = tx.splitCoins(gasCoin, [10000000]);
 
-    // Example: calling a contract function
     tx.moveCall({
-    target: `${packageAdr}::fundx::contribute`, // package ID, module, function
-    arguments: [
+      target: `${packageAdr}::fundx::contribute`,
+      arguments: [
         tx.object("0xb9ccb3ec2acb0629fbb5a0dc32e4d8c3b3ccc6e444901960640564e2d9376977"),
         splitCoin,
         tx.pure.u64(100000),
         tx.object('0x6')
-    ],
-    typeArguments: [], // if your Move function needs type arguments, add here
+      ],
+      typeArguments: [],
     });
 
     const { bytes, signature } = await tx.sign({ client, signer: keypair });
 
     const result = await client.executeTransactionBlock({
-    transactionBlock: bytes,
-    signature,
-    options: {
-        showEffects: true,
-    },
-    requestType: 'WaitForLocalExecution',
+      transactionBlock: bytes,
+      signature,
+      options: { showEffects: true },
+      requestType: 'WaitForLocalExecution',
     });
 
-    alert(`Move Contract Call Result ${result.digest}`);
+    setTxDigest(result.digest);
   };
 
   const copyAddress = async (
@@ -539,7 +535,7 @@ export default function CryptoTable({ dex }: CryptoTableProps) {
             )}
           </div>
         </ScrollArea>
-      </div>
+      </div>      
 
       {hasMore && (
         <Button
@@ -558,6 +554,26 @@ export default function CryptoTable({ dex }: CryptoTableProps) {
             "Load More"
           )}
         </Button>
+      )}
+
+      {txDigest && (
+        <div className="fixed bottom-6 right-6 bg-[#132d5b] text-white px-5 py-4 rounded-lg shadow-lg z-50 max-w-xs">
+          <p className="font-semibold text-sm">Transaction Submitted!</p>
+          <a
+            href={`https://suiscan.xyz/testnet/tx/${txDigest}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline text-sm mt-1 block"
+          >
+            View on Sui Explorer
+          </a>
+          <button
+            onClick={() => setTxDigest(null)}
+            className="mt-2 text-xs hover:underline"
+          >
+            Close
+          </button>
+        </div>
       )}
     </>
   );
