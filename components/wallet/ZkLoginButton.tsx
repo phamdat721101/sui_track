@@ -1,12 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
-import { fromBase64, toBase64 } from "@mysten/sui/utils";
 import {jwtDecode} from "jwt-decode";
 import { Button } from "../ui/Button";
 import { generateNonce, generateRandomness, jwtToAddress } from '@mysten/sui/zklogin';
 import { SuiClient } from "@mysten/sui/client";
-import axios from "axios";
 import { sha256 } from "js-sha256";
 
 const FULLNODE_URL = 'https://fullnode.devnet.sui.io';
@@ -41,10 +39,10 @@ export function ZkLoginButton() {
         const publicKey = keypair.getPublicKey().toBase64();
         const nonce = btoa(publicKey);                    // Simple nonce strategy
 
-        const REDIRECT_URI = "http://localhost:3000";
+        const REDIRECT_URI = process.env.REDIRECT_URI || "http://localhost:3000";
         const params = new URLSearchParams({
             // Configure client ID and redirect URI with an OpenID provider
-            client_id: '363237693993-ade6bkvrb7hh44g9phqgl2u3uqth7n2h.apps.googleusercontent.com',
+            client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||'',
             redirect_uri: REDIRECT_URI,
             response_type: 'id_token',
             scope: 'openid',
