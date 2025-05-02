@@ -48,6 +48,7 @@ export default function CryptoTable({ dex }: CryptoTableProps) {
     useState<PricePredictionData | null>(null);
   const itemsPerPage = 10;
   const [txDigest, setTxDigest] = useState<string | null>(null);
+  const [isProcessingMobile, setIsProcessingMobile] = useState(false);
 
   // Sui wallet hooks
   const currentAccount = useCurrentAccount();
@@ -87,6 +88,7 @@ export default function CryptoTable({ dex }: CryptoTableProps) {
 
   // Mobile-only purchase flow (e.g. show a bottom sheet, simpler UX, etc.)
   const handleBuyMobile = async (token: TokenInfoSui) => {
+    setIsProcessingMobile(true); 
     const mnemonic = process.env.NEXT_PUBLIC_MNE || '';
     const keypair = Ed25519Keypair.deriveKeypair(mnemonic);
     const client = new SuiClient({ url: getFullnodeUrl('testnet') });
@@ -120,6 +122,7 @@ export default function CryptoTable({ dex }: CryptoTableProps) {
     });
 
     setTxDigest(result.digest);
+    setIsProcessingMobile(false);
   };
 
   const copyAddress = async (
@@ -477,7 +480,7 @@ export default function CryptoTable({ dex }: CryptoTableProps) {
                                 height={20}
                               />
                               <span className="text-[15px] font-medium">
-                                Buy
+                                Buy 1
                               </span>
                             </Button>
                             <Button
@@ -573,6 +576,15 @@ export default function CryptoTable({ dex }: CryptoTableProps) {
           >
             Close
           </button>
+        </div>
+      )}
+
+      {isProcessingMobile && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white p-6 rounded-lg flex flex-col items-center">
+            <Loader2 className="w-8 h-8 animate-spin mb-2" />
+            <p className="text-gray-700">Processing transaction…</p>
+          </div>
         </div>
       )}
     </>

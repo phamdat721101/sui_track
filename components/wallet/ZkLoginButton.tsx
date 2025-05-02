@@ -6,6 +6,7 @@ import { Button } from "../ui/Button";
 import { generateNonce, generateRandomness, jwtToAddress } from '@mysten/sui/zklogin';
 import { SuiClient } from "@mysten/sui/client";
 import { sha256 } from "js-sha256";
+import { QRCodeCanvas as QRCode } from 'qrcode.react';
 
 const FULLNODE_URL = 'https://fullnode.devnet.sui.io';
 const suiClient = new SuiClient({url: FULLNODE_URL});
@@ -32,6 +33,7 @@ function shortenAddress(addr: string) {
 export function ZkLoginButton() {
     const [address, setAddress] = useState<string|null>(null);
     const [copied, setCopied] = useState(false);
+    const [showQR, setShowQR] = useState(false);
 
     // 1️⃣ On click, generate ephemeral keypair & nonce
     const startLogin = () => {
@@ -95,20 +97,32 @@ export function ZkLoginButton() {
     // Render login or logout UI
     if (address) {
         return (
-            <div className="flex items-center space-x-2">
-                <span className="text-white cursor-pointer" onClick={handleCopy} title="Copy address">
-                    {shortenAddress(address)} {copied ? '(Copied)' : ''}
-                </span>
-                <Button onClick={handleLogout} className="bg-red-600 hover:bg-red-700 text-white">
-                    Logout
-                </Button>
-            </div>
+          <div className="relative flex items-center space-x-2 flex-nowrap">
+            <span
+              className="text-white cursor-pointer whitespace-nowrap"
+              onClick={() => setShowQR(prev => !prev)}
+              title="Click to show QR / Copy on long press"
+            >
+              {shortenAddress(address)} {copied ? '(Copied)' : ''}
+            </span>
+            <Button onClick={handleCopy} className="bg-gray-600 hover:bg-gray-700 text-white">
+              Copy
+            </Button>
+            <Button onClick={handleLogout} className="bg-red-600 hover:bg-red-700 text-white">
+              Logout
+            </Button>
+            {showQR && (
+              <div className="absolute top-full mt-2 p-2 bg-white rounded shadow-lg z-50">
+                <QRCode value={address} size={128} />
+              </div>
+            )}
+          </div>
         );
     }
 
     return (
         <Button onClick={startLogin} className="bg-[#132d5b] hover:bg-[#1a3c73] text-white">
-        Login with zkLogin
+            Login
         </Button>
     );
 }

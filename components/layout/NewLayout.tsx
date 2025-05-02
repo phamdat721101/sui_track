@@ -8,11 +8,7 @@ import GlobalContext from "../../context/store";
 import { BellIcon, BoltIcon, UserCircleIcon } from "lucide-react";
 import { Separator } from "../ui/separator";
 import SelectChain from "./SelectChain";
-import {
-  createNetworkConfig,
-  SuiClientProvider,
-  WalletProvider,
-} from "@mysten/dapp-kit";
+import { createNetworkConfig, SuiClientProvider, WalletProvider } from "@mysten/dapp-kit";
 import { getFullnodeUrl } from "@mysten/sui/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { customTheme } from "../wallet/CustomTheme";
@@ -49,24 +45,18 @@ const Layout = ({
                     {selectedNav}
                   </span>
 
-                  <div className="md:hidden ml-auto">
+                  <div className="flex items-center space-x-2 md:space-x-4 flex-nowrap overflow-x-auto">
                     <SearchForm />
-                    <ZkLoginButton />
-                  </div>
-
-                  <div className="hidden md:flex items-center text-gray-500 gap-8">
-                    <SearchForm />
-                    <SelectChain />
+                    <div className="hidden md:flex">
+                      <SelectChain />
+                    </div>
                     <button>
                       <BoltIcon strokeWidth={1} />
                     </button>
                     <button>
                       <BellIcon strokeWidth={1} />
                     </button>
-                    <Separator
-                      orientation="vertical"
-                      className="h-5 w-0.5 bg-gray-700"
-                    />
+                    <Separator orientation="vertical" className="h-5 w-px bg-gray-700" />
                     <CustomBtn />
                     <ZkLoginButton />
                   </div>
