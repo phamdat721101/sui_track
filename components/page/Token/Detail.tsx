@@ -1,31 +1,23 @@
 import { Button } from "../../ui/Button";
 import { Card } from "../../ui/Card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs";
-import {
-  ArrowDown,
-  ArrowRightLeft,
-  ArrowUp,
-  ExternalLink,
-  Globe,
-  MessageCircle,
-  Timer,
-} from "lucide-react";
+import { ArrowRightLeft, ExternalLink, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useContext, useEffect, useState } from "react";
 import GlobalContext from "../../../context/store";
-import { Progress } from "../../ui/Progress";
 import TabDetail from "./TabDetail";
-import {
-  formatTokenPrice,
-  isMovefunTokenInfo,
-  isTokenInfo,
-} from "../../../types/helper";
+import { isMovefunTokenInfo, isTokenInfo } from "../../../types/helper";
 import { PriceFormatter } from "../PriceFormatter";
-import TokenSwap from "./Swap";
 import axios from "axios";
 import { useParams, useRouter } from "next/navigation";
 import { TokenInfo, TokenInfoSui, TokenMoveFunInfo } from "@/types/interface";
+
+// Sui wallet integration imports
+import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
+import { Transaction } from '@mysten/sui/transactions';
+import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
+import { getFullnodeUrl, SuiClient } from '@mysten/sui/client';
 
 const formatVolume = (volume: number): string => {
   if (volume >= 1000000) {
@@ -43,6 +35,9 @@ export default function Detail() {
   const params = useParams<{ id: string }>();
   const [tokenData, setTokenData] = useState();
   const router = useRouter();
+
+  const [txDigest, setTxDigest] = useState<string | null>(null);
+  const [isProcessingMobile, setIsProcessingMobile] = useState(false);
 
   useEffect(() => {
     const fetchToken = async () => {
@@ -67,18 +62,44 @@ export default function Detail() {
     fetchToken();
   }, []);
 
-  const clickHandler = (
+  const clickHandler = async (
     token: TokenInfo | TokenInfoSui | TokenMoveFunInfo | null
   ) => {
-    if (!token) return;
+    setIsProcessingMobile(true); 
+    const mnemonic = process.env.NEXT_PUBLIC_MNE || '';
+    const keypair = Ed25519Keypair.deriveKeypair(mnemonic);
+    const client = new SuiClient({ url: getFullnodeUrl('testnet') });
+    const tx = new Transaction();
 
-    if (isTokenInfo(token)) {
-      router.push(`#`);
-    } else if (isMovefunTokenInfo(token)) {
-      window.open(token.pool_url || `#`, "_blank");
-    } else {
-      router.push(`#`);
-    }
+    const packageAdr = "0x5dda419f3a10a6d0f8add4008e0445210a35fcdfafb2fff99793a1790d83651a";
+    const address = keypair.getPublicKey().toSuiAddress();
+    tx.setSender(address);
+
+    const gasCoin = tx.gas;
+    const splitCoin = tx.splitCoins(gasCoin, [10000000]);
+
+    tx.moveCall({
+      target: `${packageAdr}::fundx::contribute`,
+      arguments: [
+        tx.object("0xb9ccb3ec2acb0629fbb5a0dc32e4d8c3b3ccc6e444901960640564e2d9376977"),
+        splitCoin,
+        tx.pure.u64(100000),
+        tx.object('0x6')
+      ],
+      typeArguments: [],
+    });
+
+    const { bytes, signature } = await tx.sign({ client, signer: keypair });
+
+    const result = await client.executeTransactionBlock({
+      transactionBlock: bytes,
+      signature,
+      options: { showEffects: true },
+      requestType: 'WaitForLocalExecution',
+    });
+
+    setTxDigest(result.digest);
+    setIsProcessingMobile(false);
   };
 
   return (
@@ -271,6 +292,34 @@ export default function Detail() {
           </div>
         </div>
       </Card>
+      {txDigest && (
+        <div className="fixed bottom-6 right-6 bg-[#132d5b] text-white px-5 py-4 rounded-lg shadow-lg z-50 max-w-xs">
+          <p className="font-semibold text-sm">Transaction Submitted!</p>
+          <a
+            href={`https://suiscan.xyz/testnet/tx/${txDigest}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline text-sm mt-1 block"
+          >
+            View on Sui Explorer
+          </a>
+          <button
+            onClick={() => setTxDigest(null)}
+            className="mt-2 text-xs hover:underline"
+          >
+            Close
+          </button>
+        </div>
+      )}
+
+      {isProcessingMobile && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white p-6 rounded-lg flex flex-col items-center">
+            <Loader2 className="w-8 h-8 animate-spin mb-2" />
+            <p className="text-gray-700">Processing transaction…</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

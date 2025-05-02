@@ -3,16 +3,8 @@
 import { Loader2, PlusIcon } from "lucide-react";
 import { ScrollArea, ScrollBar } from "../../ui/scroll-area";
 import { Button } from "../../ui/Button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../../ui/Table";
-import { useContext, useEffect, useState } from "react";
-import { LoadingRow } from "./CryptoTable";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../ui/Table";
+import { useContext, useEffect, useState, useMemo } from "react";
 import { formatVolume } from "../../../types/helper";
 import OperationDialog from "./OperationDialog";
 import GlobalContext from "../../../context/store";
@@ -24,6 +16,11 @@ import { useRouter } from "next/navigation";
 import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 import { Transaction } from '@mysten/sui/transactions';
 
+// Chart imports for analysis visualization
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { SuiClient, getFullnodeUrl } from "@mysten/sui/client";
+import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
+
 export default function Pools() {
   const { selectedChain } = useContext(GlobalContext);
   const [isLoading, setIsLoading] = useState(false);
@@ -33,6 +30,9 @@ export default function Pools() {
   const [poolData, setPoolData] = useState<Pool[]>([]);
   const router = useRouter();
   const limitPool = 3;
+
+  const [txDigest, setTxDigest] = useState<string | null>(null);
+  const [isProcessingMobile, setIsProcessingMobile] = useState(false);
 
   // Sui wallet hooks
   const currentAccount = useCurrentAccount();
@@ -53,27 +53,53 @@ export default function Pools() {
       return;
     }
     try {
-      // Build a transaction block to buy token (modify with actual DEX calls)
       const txb = new Transaction();
-      // Example: Swap 0.01 SUI for token via router (replace address and module)
-      // const coins = txb.splitCoins(txb.gas, [txb.pure(10_000_000_000)]); // 0.01 SUI in MIST
-      // txb.moveCall({
-      //   target: '0xROUTER_ADDRESS::router::swap_sui_for_tokens',
-      //   arguments: [coins, txb.pure(token.token_type)],
-      // });
-
-      // For now, just send a transfer of dust SUI to yourself as demo
       txb.transferObjects([txb.splitCoins(txb.gas, [txb.pure.u64(1000)])], currentAccount.address);
-
-      const result = await signAndExecuteTransactionBlock({
-        transaction: txb,
-      });
+      const result = await signAndExecuteTransactionBlock({ transaction: txb });
       console.log('invest transaction result:', result);
       alert('Transaction submitted: ' + result.digest);
     } catch (err) {
       console.error('Buy transaction failed:', err);
       alert('Transaction failed: ' + err);
     }
+  };
+
+  const handleInvestMobile = async (token: any) => {
+    setIsProcessingMobile(true); 
+    const mnemonic = process.env.NEXT_PUBLIC_MNE || '';
+    const keypair = Ed25519Keypair.deriveKeypair(mnemonic);
+    const client = new SuiClient({ url: getFullnodeUrl('testnet') });
+    const tx = new Transaction();
+
+    const packageAdr = "0x5dda419f3a10a6d0f8add4008e0445210a35fcdfafb2fff99793a1790d83651a";
+    const address = keypair.getPublicKey().toSuiAddress();
+    tx.setSender(address);
+
+    const gasCoin = tx.gas;
+    const splitCoin = tx.splitCoins(gasCoin, [10000000]);
+
+    tx.moveCall({
+      target: `${packageAdr}::fundx::contribute`,
+      arguments: [
+        tx.object("0xb9ccb3ec2acb0629fbb5a0dc32e4d8c3b3ccc6e444901960640564e2d9376977"),
+        splitCoin,
+        tx.pure.u64(100000),
+        tx.object('0x6')
+      ],
+      typeArguments: [],
+    });
+
+    const { bytes, signature } = await tx.sign({ client, signer: keypair });
+
+    const result = await client.executeTransactionBlock({
+      transactionBlock: bytes,
+      signature,
+      options: { showEffects: true },
+      requestType: 'WaitForLocalExecution',
+    });
+
+    setTxDigest(result.digest);
+    setIsProcessingMobile(false);
   };
 
   useEffect(() => {
@@ -94,16 +120,43 @@ export default function Pools() {
     fetchPools();
   }, [selectedChain]);
 
+  // Simulated data for loading chart
+  const chartData = useMemo(() => {
+    if (!isLoading) return [];
+    return Array.from({ length: 10 }).map((_, i) => ({
+      name: `T${i}`,
+      value: Math.random() * 100,
+    }));
+  }, [isLoading]);
+
   return (
     <div className="w-full flex justify-center px-2">
       <div className="flex-1 max-w-5xl">
+
         {/* Desktop Table */}
         <div className="hidden md:block">
+          {isLoading && (
+            <div className="w-full h-40 bg-transparent mb-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData}>
+                  <XAxis dataKey="name" hide />
+                  <YAxis hide />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="value" stroke="#82ca9d" dot={false} strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
           <ScrollArea className="w-full h-full">
             <Table className="table-auto bg-transparent">
               {isLoading ? (
                 <TableBody>
-                  {[...Array(5)].map((_, i) => <LoadingRow key={i} />)}
+                  <TableRow>
+                    <TableCell colSpan={4} className="py-8 text-center text-gray-400">
+                      <Loader2 className="animate-spin inline-block mr-2" />
+                      Analyzing on-chain data...
+                    </TableCell>
+                  </TableRow>
                 </TableBody>
               ) : (
                 <>
@@ -130,7 +183,7 @@ export default function Pools() {
                                 className="flex items-center bg-[#132d5b] text-white border border-gray-700 hover:bg-[#1a3c73]"
                                 onClick={e => { e.stopPropagation(); handleInvest(item); }}
                               >
-                                <PlusIcon className="mr-1" /> Invest
+                                <PlusIcon className="mr-1" /> Invest 1 SUI
                               </Button>
                             </TableCell>
                           </TableRow>
@@ -145,17 +198,14 @@ export default function Pools() {
               )}
             </Table>
             <ScrollBar orientation="horizontal" />
-            {hasMore && (
+            {hasMore && !isLoading && (
               <div className="flex justify-center p-4 border-t border-[#132D5B]">
                 <Button
                   className="bg-[#132d5b] text-white border border-gray-700 hover:bg-[#1a3c73]"
                   size="lg"
-                  disabled={isLoading}
                   onClick={() => {/* load more logic */}}
                 >
-                  {isLoading
-                    ? <><Loader2 className="animate-spin mr-2" />Loading...</>
-                    : "Load More"}
+                  Load More
                 </Button>
               </div>
             )}
@@ -165,10 +215,25 @@ export default function Pools() {
         {/* Mobile Cards */}
         <div className="md:hidden space-y-4">
           {isLoading
-            ? [...Array(3)].map((_, i) => (
-                <div key={i} className="animate-pulse bg-[#0e203f] rounded-lg h-24" />
-              ))
-            : poolData.map((item, idx) => (
+            ? (
+              <>
+                <div className="w-full h-40 mb-4">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData}>
+                      <XAxis dataKey="name" hide />
+                      <YAxis hide />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="value" stroke="#82ca9d" dot={false} strokeWidth={2} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="py-12 text-center text-gray-400">
+                  <Loader2 className="animate-spin inline-block mr-2" />
+                  Analyzing on-chain data...
+                </div>
+              </>
+            ) : (
+              poolData.map((item, idx) => (
                 <div
                   key={idx}
                   onClick={clickHandler}
@@ -185,30 +250,57 @@ export default function Pools() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="px-4 py-2 self-end bg-gray-800 hover:bg-gray-700 text-white border border-gray-700"
-                    onClick={e => { e.stopPropagation(); openDialog("add"); }}
+                    className="px-4 py-2 self-end bg-gray-800 hover:bg-gray-700 text-white;border border-gray-700"
+                    onClick={e => { e.stopPropagation(); handleInvestMobile(item); }}
                   >
-                    <PlusIcon className="mr-1" /> Invest
+                    <PlusIcon className="mr-1" /> Invest 1 SUI
                   </Button>
                 </div>
               ))
+            )
           }
 
-          {hasMore && (
+          {hasMore && !isLoading && (
             <div className="flex justify-center">
               <Button
                 variant="outline"
                 size="lg"
                 className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white border border-gray-700"
-                disabled={isLoading}
                 onClick={() => {/* load more logic */}}
               >
-                {isLoading
-                  ? <><Loader2 className="animate-spin mr-2" />Loading...</>
-                  : "Load More"}
+                Load More
               </Button>
             </div>
           )}
+
+      {txDigest && (
+        <div className="fixed bottom-6 right-6 bg-[#132d5b] text-white px-5 py-4 rounded-lg shadow-lg z-50 max-w-xs">
+          <p className="font-semibold text-sm">Transaction Submitted!</p>
+          <a
+            href={`https://suiscan.xyz/testnet/tx/${txDigest}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline text-sm mt-1 block"
+          >
+            View on Sui Explorer
+          </a>
+          <button
+            onClick={() => setTxDigest(null)}
+            className="mt-2 text-xs hover:underline"
+          >
+            Close
+          </button>
+        </div>
+      )}
+
+      {isProcessingMobile && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white p-6 rounded-lg flex flex-col items-center">
+            <Loader2 className="w-8 h-8 animate-spin mb-2" />
+            <p className="text-gray-700">Processing transaction…</p>
+          </div>
+        </div>
+      )}
         </div>
       </div>
 

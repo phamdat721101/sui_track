@@ -620,12 +620,8 @@ const Tetris: React.FC = () => {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              if (isValidAptosAddress(walletAddress)) {
-                setCurrentAddress(walletAddress);
-                setAddressError(null);
-              } else {
-                setAddressError("Invalid Aptos address");
-              }
+              setCurrentAddress(walletAddress);
+              setAddressError(null);
             }}
             className="w-full"
           >
@@ -636,7 +632,7 @@ const Tetris: React.FC = () => {
                 setWalletAddress(e.currentTarget.value);
                 setAddressError(null);
               }}
-              placeholder="Enter your Aptos wallet address"
+              placeholder="Enter your SUI wallet address"
               className="w-full p-2.5 rounded-lg bg-[#102447] focus:outline-none text-sm text-gray-50 border border-bluesky mb-2"
             />
             {addressError && (
