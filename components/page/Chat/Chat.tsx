@@ -2,15 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { SendHorizonalIcon, User, Bot } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "../../ui/Avatar";
-
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "../../ui/Card";
+import { Avatar, AvatarFallback } from "../../ui/Avatar";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../../ui/Card";
 import MarkdownDisplay from "./MarkdownDisplay";
 
 interface Message {
@@ -21,7 +14,7 @@ interface Message {
 
 import { SuiAgentKit, createSuiTools } from "@getnimbus/sui-agent-kit";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
-const mnemonic = "program level hungry inflict slim venue coil cereal either input nominee calm";
+const mnemonic = process.env.NEXT_PUBLIC_MNE || '';
 const keypair = Ed25519Keypair.deriveKeypair(mnemonic);
 
 // Initialize with private key and optional RPC URL
@@ -40,13 +33,11 @@ function getAddressTool() {
   ) as { run: () => Promise<string> } | undefined;
 }
 
-export default function ChatPage() {   
+export default function ChatPage() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const toggleChat = () => setIsOpen(!isOpen);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputMessage(e.target.value);
@@ -54,65 +45,52 @@ export default function ChatPage() {
 
   const sendMessage = async () => {
     if (inputMessage.trim() === "") return;
-        
+
     const newMessage: Message = {
       id: Date.now(),
       text: inputMessage,
       sender: "user",
     };
 
-    setMessages((prevMessages) => [...prevMessages, newMessage]);
+    setMessages((prev) => [...prev, newMessage]);
     setInputMessage("");
 
-    if(inputMessage.includes("get wallet address")){
-      const botMessage: Message = {
-        id: Date.now(),
-        text: agent.getWalletAddress(),
-        sender: "bot",
-      };
-      setMessages((prevMessages) => [...prevMessages, botMessage]);
-      return
+    // special command
+    if (inputMessage.includes("get wallet address")) {
+      const address = await getAddressTool()?.run();
+      setMessages((prev) => [
+        ...prev,
+        { id: Date.now() + 1, text: address || "No address", sender: "bot" },
+      ]);
+      return;
     }
 
     const reply = await fetchBotMessage(inputMessage);
-
     if (reply) {
-      const botMessage: Message = {
-        id: Date.now(),
-        text: reply,
-        sender: "bot",
-      };
-      setMessages((prevMessages) => [...prevMessages, botMessage]);
+      setMessages((prev) => [
+        ...prev,
+        { id: Date.now() + 2, text: reply, sender: "bot" },
+      ]);
     }
   };
 
   const fetchBotMessage = async (userInput: string) => {
     const url = `${process.env.NEXT_PUBLIC_TRACKIT_API_HOST}/agent/chat`;
-    console.log("Api url: ", url)
-    const value = {
-      content: userInput,
-    };
-
     try {
       const response = await fetch(url, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(value),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: userInput }),
       });
       const result: string = await response.json();
-      const cleanResult = result.replace(/<think>|<\/think>/g, "");
-      return cleanResult;
-    } catch (error) {
-      console.log("Failed to fetch response.");
+      return result.replace(/<think>|<\/think>/g, "");
+    } catch {
+      return "Error fetching response.";
     }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      sendMessage();
-    }
+    if (e.key === "Enter") sendMessage();
   };
 
   useEffect(() => {
@@ -122,7 +100,7 @@ export default function ChatPage() {
   return (
     <Card className="w-full h-[85vh] flex flex-col">
       <CardHeader className="border-b">
-        <CardTitle></CardTitle>
+        <CardTitle>Chat</CardTitle>
       </CardHeader>
       <CardContent className="flex-1 overflow-y-auto p-4">
         <div className="space-y-4">
@@ -145,14 +123,15 @@ export default function ChatPage() {
                     </AvatarFallback>
                   </Avatar>
                 )}
+                {/* Responsive bubble: full-width on mobile, max-70% on larger */}
                 <div
-                  className={`max-w-[70%] p-3 rounded-lg ${
+                  className={`w-full sm:max-w-[70%] p-3 rounded-lg ${
                     message.sender === "user"
                       ? "bg-blue-500 text-white rounded-br-none"
                       : "bg-gray-200 text-gray-800 rounded-bl-none"
                   }`}
                 >
-                  {message.sender !== "user" && message.text ? (
+                  {message.sender === "bot" ? (
                     <MarkdownDisplay
                       content={message.text
                         .replace(/(\d+\.\s\*\*[^:]*\*\*:)/g, "## $1")
@@ -175,7 +154,7 @@ export default function ChatPage() {
           <div ref={messagesEndRef} />
         </div>
       </CardContent>
-      <CardFooter className="border-t p-4">
+      <CardFooter className="border-t p-4 flex">
         <input
           type="text"
           value={inputMessage}
@@ -186,7 +165,7 @@ export default function ChatPage() {
         />
         <button
           onClick={sendMessage}
-          className="h-full bg-bluesky hover:bg-blue-500 text-white p-2 rounded-r-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-r-lg"
         >
           <SendHorizonalIcon size={20} />
         </button>
