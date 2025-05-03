@@ -173,7 +173,14 @@ export default function Pools() {
                       ? poolData.map((item, idx) => (
                           <TableRow key={idx} onClick={clickHandler} className="group hover:bg-blue-900">
                             <TableCell className="sticky left-0 bg-[#0e203f]">
-                              {item.pool?.symbol || "N/A"}
+                              <div className="flex items-center">
+                                <img
+                                  src="/dexes/flowx.png"
+                                  alt="FlowX"
+                                  className="w-5 h-5 mr-2"
+                                />
+                                {item.pool?.symbol || "N/A"}
+                              </div>
                             </TableCell>
                             <TableCell>${formatVolume(item.pool?.tvl) || "-"}</TableCell>
                             <TableCell>{item.pool.apr.toFixed(3)}%</TableCell>
@@ -240,7 +247,14 @@ export default function Pools() {
                   className="bg-[#0e203f] rounded-lg p-4 shadow flex flex-col"
                 >
                   <div className="flex justify-between mb-2">
-                    <span className="font-semibold">{item.pool?.symbol}</span>
+                    <div className="flex items-center font-semibold">
+                      <img
+                        src="/dexes/flowx.png"
+                        alt="FlowX"
+                        className="w-5 h-5 mr-2"
+                      />
+                      {item.pool?.symbol}
+                    </div>
                     <span className="text-sm">{item.pool.apr.toFixed(2)}%</span>
                   </div>
                   <div className="flex justify-between mb-3">

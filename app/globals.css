@@ -89,11 +89,3 @@
     background: #1a3c78;
   }
 }
-
-.banner {
-  background-image: url(../public/banner-token-sale.jpg);
-  background-size: cover;
-  background-repeat: no-repeat;
-  background-position: center;
-  height: 80%;
-}

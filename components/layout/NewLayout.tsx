@@ -57,7 +57,9 @@ const Layout = ({
                       <BellIcon strokeWidth={1} />
                     </button>
                     <Separator orientation="vertical" className="h-5 w-px bg-gray-700" />
-                    <CustomBtn />
+                    <div className="hidden md:flex">
+                      <CustomBtn/>
+                    </div>
                     <ZkLoginButton />
                   </div>
                 </header>

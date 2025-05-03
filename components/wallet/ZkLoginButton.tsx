@@ -97,26 +97,26 @@ export function ZkLoginButton() {
     // Render login or logout UI
     if (address) {
         return (
-          <div className="relative flex items-center space-x-2 flex-nowrap">
-            <span
-              className="text-white cursor-pointer whitespace-nowrap"
-              onClick={() => setShowQR(prev => !prev)}
-              title="Click to show QR / Copy on long press"
-            >
-              {shortenAddress(address)} {copied ? '(Copied)' : ''}
-            </span>
-            <Button onClick={handleCopy} className="bg-gray-600 hover:bg-gray-700 text-white">
-              Copy
-            </Button>
-            <Button onClick={handleLogout} className="bg-red-600 hover:bg-red-700 text-white">
-              Logout
-            </Button>
-            {showQR && (
-              <div className="absolute top-full mt-2 p-2 bg-white rounded shadow-lg z-50">
-                <QRCode value={address} size={128} />
-              </div>
-            )}
-          </div>
+            <div className="relative flex items-center space-x-2 flex-nowrap relative">
+                <span
+                    className="text-white cursor-pointer whitespace-nowrap"
+                    onClick={() => setShowQR(prev => !prev)}
+                    title="Click to show QR / Copy on long press"
+                >
+                {shortenAddress(address)} {copied ? '(Copied)' : ''}
+                </span>
+                <Button onClick={handleCopy} className="bg-gray-600 hover:bg-gray-700 text-white">
+                Copy
+                </Button>
+                <Button onClick={handleLogout} className="bg-red-600 hover:bg-red-700 text-white">
+                Logout
+                </Button>
+                {showQR && (
+                <div className="absolute top-full mt-2 p-2 bg-white rounded shadow-lg z-50 pointer-events-auto">
+                    <QRCode value={address} size={128} />
+                </div>
+                )}
+            </div>
         );
     }
 
