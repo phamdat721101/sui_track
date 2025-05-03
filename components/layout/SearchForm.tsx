@@ -1,228 +1,173 @@
 import React, { useState } from "react";
 import { Clock, AlertCircle, Search, X } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "../ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+import { Button } from "../ui/Button";
 
-// Mock data - replace with your actual API data
-const exchangeData = [
-  {
-    name: "Binance",
-    rate: 2.83927341,
-    eta: "5-45 min",
-    kycRisk: "Low",
-    tag: "Trusted partner",
-    tagColor: "text-green-400 bg-green-400/10",
-  },
-  {
-    name: "EasyBit",
-    rate: 2.84381467,
-    eta: "5-45 min",
-    kycRisk: "Medium",
-    tag: "Best rate",
-    tagColor: "text-yellow-400 bg-yellow-400/10",
-  },
-  {
-    name: "ChangeHero",
-    rate: 2.8437469347,
-    eta: "5-30 min",
-    kycRisk: "Low",
-    tag: "Fastest",
-    tagColor: "text-blue-400 bg-blue-400/10",
-  },
-  {
-    name: "Changelly",
-    rate: 2.84136667,
-    eta: "5-35 min",
-    kycRisk: "Medium",
-    tag: "",
-    tagColor: "",
-  },
-  {
-    name: "ChangeHero",
-    rate: 2.8437469347,
-    eta: "5-30 min",
-    kycRisk: "Low",
-    tag: "Fastest",
-    tagColor: "text-blue-400 bg-blue-400/10",
-  },
-  {
-    name: "Changelly",
-    rate: 2.84136667,
-    eta: "5-35 min",
-    kycRisk: "Medium",
-    tag: "",
-    tagColor: "",
-  },
-];
-
-interface ResponseProps {
-  srcAsset: string;
-  dstAsset: string;
-  srcAmount: string;
-  dstAmount: string;
-  feeAmount: string;
-  isFeeIn: boolean;
-  paths: Path[][];
-}
-
-interface Path {
-  poolId: string;
-  source: string;
-  srcAsset: string;
-  dstAsset: string;
-  srcAmount: number;
-  dstAmount: number;
+interface TokenResult {
+  symbol: string;
+  age: string;
+  address: string;
+  volume24h: string;
+  liq: string;
+  marketCap: string;
+  change24h: string;
+  iconUrl: string;
+  chainColor: string;
 }
 
 export default function SearchForm() {
   const [searchValue, setSearchValue] = useState("");
   const [isOpen, setIsOpen] = useState(false);
-  const [results, setResults] = useState<Path[]>([]);
+  const [results, setResults] = useState<TokenResult[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasSearched, setHasSearched] = useState<boolean>(false);
 
-  const handleSearch = async (
-    e: React.FormEvent<HTMLFormElement>
-  ): Promise<void> => {
+  const mockResults: TokenResult[] = [
+    {
+      symbol: "PQDQ",
+      age: "102d",
+      address: "0x567...07c",
+      volume24h: "$0",
+      liq: "$0.009",
+      marketCap: "$7.22e",
+      change24h: "29.0%",
+      iconUrl: "/token-placeholder.png",
+      chainColor: "#3C3C3D",
+    },
+    {
+      symbol: "PQD Q",
+      age: "158d",
+      address: "0x8ca...e80",
+      volume24h: "$0",
+      liq: "$279.38",
+      marketCap: "$587K",
+      change24h: "-0.63%",
+      iconUrl: "/token-placeholder.png",
+      chainColor: "#627EEA",
+    },
+    {
+      symbol: "PQD",
+      age: "135d",
+      address: "0x5RS...ump",
+      volume24h: "$0",
+      liq: "$4,118.56",
+      marketCap: "$7,247.48",
+      change24h: "0%",
+      iconUrl: "/token-placeholder.png",
+      chainColor: "#8C8C8C",
+    },
+    // ...add more mocks as needed
+  ];
+
+  const handleSearch = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
-    setHasSearched(true);
 
-    // Filter results based on search value
-    // const filtered = exchangeData.filter((exchange) =>
-    //   exchange.name.toLowerCase().includes(searchValue.toLowerCase())
-    // );
-    // setResults(filtered);
+    if (!searchValue.trim()) {
+      setError("Please enter a token symbol or address");
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      if (!searchValue.trim()) {
-        throw new Error("Please enter a token address");
-      }
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_TRACKIT_API_HOST}/token/route?src_adr=0x1::aptos_coin::AptosCoin&dst_adr=${searchValue}`
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data: ResponseProps = await response.json();
-
-      if (!data.paths) return;
-      setResults(data.paths[0]);
+      // ** Replace this with your real API call later **
+      await new Promise((r) => setTimeout(r, 500));
+      setResults(mockResults);
       setIsOpen(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch data");
-      console.error("Error fetching data:", err);
+      setError("Failed to fetch data");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-2xl mx-auto px-4">
       {/* Search Form */}
-      <form onSubmit={handleSearch} className="relative">
-        <div className="relative">
-          <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 h-7 w-7 text-gray-400"
-            strokeWidth={1}
-          />
-          <input
-            type="text"
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            placeholder="Search"
-            className="w-full pl-12 pr-4 py-2 rounded-3xl bg-[#102447] text-gray-500 focus:outline-none focus:border-gray-600 text-sm"
-          />
-        </div>
-        {error && <div className="text-rose-500 text-sm">{error}</div>}
+      <form onSubmit={handleSearch} className="relative mb-4">
+        <Search
+          className="absolute left-3 top-1/2 -translate-y-1/2 h-6 w-6 text-gray-400"
+          strokeWidth={1}
+        />
+        <input
+          type="text"
+          value={searchValue}
+          onChange={(e) => setSearchValue(e.target.value)}
+          placeholder="Search token symbol or address"
+          className="w-full pl-12 pr-4 py-2 rounded-full bg-[#102447] text-gray-300 focus:outline-none focus:ring-2 focus:ring-[#1a3c78] text-sm"
+        />
+        {error && <div className="text-rose-500 text-sm mt-1">{error}</div>}
       </form>
 
       {/* Results Dialog */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-2xl bg-gray-900 text-gray-100 border-gray-800">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              <span>Search Results</span>
-            </DialogTitle>
+        <DialogContent className="bg-[#0e203f] text-gray-100 rounded-lg w-full max-w-2xl p-0 overflow-hidden">
+          <DialogHeader className="bg-[#132d5b] px-4 py-3 flex items-center justify-between">
+            <DialogTitle className="text-lg font-semibold">Search Results</DialogTitle>
+            <X
+              className="h-5 w-5 cursor-pointer text-gray-300 hover:text-white"
+              onClick={() => setIsOpen(false)}
+            />
           </DialogHeader>
 
-          <div className="space-y-3 mt-4 pr-2.5 overflow-auto min-h-[150px]">
-            {isLoading && (
-              <div className="text-center py-8 text-gray-400">Loading...</div>
-            )}
-            {results.length === 0 ? (
-              <div className="text-center py-8 text-gray-400">
-                No exchanges found
-              </div>
+          <div className="divide-y divide-gray-700 max-h-[70vh] overflow-y-auto">
+            {isLoading ? (
+              <div className="py-8 text-center text-gray-400">Loading…</div>
+            ) : results.length === 0 ? (
+              <div className="py-8 text-center text-gray-400">No tokens found</div>
             ) : (
-              results.map((exchange, index) => (
+              results.map((token, idx) => (
                 <div
-                  key={index}
-                  className="relative p-4 rounded-xl bg-gray-800/50 border border-gray-700/50"
+                  key={idx}
+                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 hover:bg-[#1a2a4a]"
                 >
-                  {/* Exchange Header */}
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-lg font-medium text-gray-100">
-                      {exchange.source}
-                    </span>
-                    {/* {exchange.tag && (
-                      <span
-                        className={`text-xs px-2 py-1 rounded-full ${exchange.tagColor}`}
-                      >
-                        {exchange.tag}
-                      </span>
-                    )} */}
-                  </div>
-
-                  <div className="flex justify-between items-center">
-                    {/* Exchange Details */}
-                    <div className="space-y-2">
-                      {/* Rate */}
-                      <div className="flex items-center text-gray-300">
-                        <span className="text-sm mr-2">Rate</span>
-                        <span className="text-gray-100">1 APT ~8.00 USDC</span>
-                      </div>
-
-                      {/* ETA and KYC Risk */}
-                      <div className="flex items-center space-x-6">
-                        {/* ETA */}
-                        <div className="flex items-center text-gray-300">
-                          <Clock className="h-4 w-4 mr-1 opacity-50" />
-                          <span className="text-sm">5-45 mins</span>
-                        </div>
-
-                        {/* Risk */}
-                        <div className="flex items-center">
-                          <span className="text-sm text-gray-300 mr-2">
-                            Risk
-                          </span>
-                          <div className="flex items-center">
-                            <AlertCircle className="h-4 w-4 mr-1 opacity-50" />
-                            <span
-                              className={`text-sm ${
-                                "Low" === "Low"
-                                  ? "text-green-400"
-                                  : "text-yellow-400"
-                              }`}
-                            >
-                              Low
-                            </span>
-                          </div>
-                        </div>
+                  {/* Left: Icon + Symbol / Age / Address */}
+                  <div className="flex items-center w-full sm:w-1/3">
+                    <div
+                      className="h-10 w-10 rounded-full mr-3 flex-shrink-0"
+                      style={{ backgroundColor: token.chainColor }}
+                    >
+                      <img
+                        src={token.iconUrl}
+                        alt={token.symbol}
+                        className="h-full w-full rounded-full object-cover"
+                      />
+                    </div>
+                    <div>
+                      <div className="font-medium text-white">{token.symbol}</div>
+                      <div className="text-xs text-gray-400 flex items-center space-x-2">
+                        <span>{token.age}</span>
+                        <span className="truncate">{token.address}</span>
                       </div>
                     </div>
+                  </div>
 
-                    {/* Exchange Button */}
-                    <button className="px-4 py-2 rounded-lg bg-transparent border border-rose-500/50 text-rose-500 hover:bg-rose-500/10 transition-colors">
-                      Exchange
-                    </button>
+                  {/* Middle: Volume, Liquidity, Market Cap */}
+                  <div className="flex justify-between w-full sm:w-1/3 mt-3 sm:mt-0 text-xs text-gray-300">
+                    <div className="flex flex-col items-start">
+                      <span className="text-gray-400">24h Vol</span>
+                      <span className="text-gray-100">{token.volume24h}</span>
+                    </div>
+                    <div className="flex flex-col items-start">
+                      <span className="text-gray-400">Liq</span>
+                      <span className="text-gray-100">{token.liq}</span>
+                    </div>
+                    <div className="flex flex-col items-start">
+                      <span className="text-gray-400">MC</span>
+                      <span className="text-gray-100">{token.marketCap}</span>
+                    </div>
+                  </div>
+
+                  {/* Right: 24h Change */}
+                  <div className="mt-3 sm:mt-0 w-full sm:w-1/6 flex items-center justify-end">
+                    <span
+                      className={`text-sm font-semibold ${
+                        token.change24h.startsWith("-") ? "text-red-400" : "text-green-400"
+                      }`}
+                    >
+                      {token.change24h}
+                    </span>
                   </div>
                 </div>
               ))
