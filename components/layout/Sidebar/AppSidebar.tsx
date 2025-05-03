@@ -253,8 +253,7 @@ function DesktopSidebarContent({ isCollapsed }: { isCollapsed: boolean }) {
         />
       </div>
 
-      <div className="p-4 pl-6 space-y-6">
-        {/* <NavUser user={data.user} showDetails={!isCollapsed} /> */}
+      {/* <div className="p-4 pl-6 space-y-6">
         <SidebarGroup>
           <SidebarMenu>
             {connected && (
@@ -286,7 +285,7 @@ function DesktopSidebarContent({ isCollapsed }: { isCollapsed: boolean }) {
             )}
           </SidebarMenu>
         </SidebarGroup>
-      </div>
+      </div> */}
     </>
   );
 }

@@ -116,7 +116,7 @@ export default function SubscriptionDialog({
                         <FormInputWrapper>
                           <FormInput
                             type="text"
-                            placeholder="Move Address"
+                            placeholder="Sui Wallet Address"
                             value={address}
                             onChange={(e) => setAddress(e.target.value)}
                             onKeyDown={(e) => {
