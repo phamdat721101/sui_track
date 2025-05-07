@@ -7,14 +7,7 @@ import { generateNonce, generateRandomness, jwtToAddress } from '@mysten/sui/zkl
 import { SuiClient } from "@mysten/sui/client";
 import { sha256 } from "js-sha256";
 import { QRCodeCanvas as QRCode } from 'qrcode.react';
-
-const FULLNODE_URL = 'https://fullnode.devnet.sui.io';
-const suiClient = new SuiClient({url: FULLNODE_URL});
-const { epoch } = await suiClient.getLatestSuiSystemState();
-const maxEpoch = Number(epoch) + 2; // this means the ephemeral key will be active for 2 epochs from now.
-const ephemeralKeyPair = new Ed25519Keypair();
-const randomness = generateRandomness();
-const nonce = generateNonce(ephemeralKeyPair.getPublicKey(), maxEpoch, randomness);
+import axios from "axios";
 
 // Utility: turn hex string into Uint8Array
 function hexToBytes(hex: string): Uint8Array {
@@ -36,30 +29,32 @@ export function ZkLoginButton() {
     const [showQR, setShowQR] = useState(false);
 
     // 1️⃣ On click, generate ephemeral keypair & nonce
-    const startLogin = () => {
-        const keypair = new Ed25519Keypair();             // Ephemeral keypair :contentReference[oaicite:7]{index=7}
-        const publicKey = keypair.getPublicKey().toBase64();
-        const nonce = btoa(publicKey);                    // Simple nonce strategy
+    const startLogin = async () => {
+        const FULLNODE_URL = 'https://fullnode.testnet.sui.io:443';
+        const suiClient = new SuiClient({url: FULLNODE_URL});
+        const { epoch } = await suiClient.getLatestSuiSystemState();
+        const maxEpoch = Number(epoch) + 2;
+        const ephemeralKeyPair = new Ed25519Keypair();
+        const randomness = generateRandomness();
+        const nonce = generateNonce(ephemeralKeyPair.getPublicKey(), maxEpoch, randomness);
 
         const redirect_uri = process.env.NEXT_PUBLIC_REDIRECT_URI || "";
         const params = new URLSearchParams({
-            // Configure client ID and redirect URI with an OpenID provider
             client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||'',
             redirect_uri: redirect_uri,
             response_type: 'id_token',
-            scope: 'openid',
+            scope: 'openid email profile',
             nonce: nonce
         });
         
         const PROVIDER_URL = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
 
-        window.location.href = `${PROVIDER_URL}`; // Redirect to OAuth :contentReference[oaicite:8]{index=8}
+        window.location.href = PROVIDER_URL;
     };
 
     // Logout handler
     const handleLogout = () => {
         setAddress(null);
-        // Clean up URL
         if (window.history.replaceState) {
             const cleanUrl = window.location.origin + window.location.pathname;
             window.history.replaceState({}, document.title, cleanUrl);
@@ -76,23 +71,43 @@ export function ZkLoginButton() {
         }
     };
 
-    // 2️⃣ On callback, decode JWT & fetch ZK proof
+    // 2️⃣ On callback, decode JWT & fetch ZK proof, then call auth APIs
     useEffect(() => {
-        const hash = window.location.hash.slice(1);
-        const params = new URLSearchParams(hash);
-        const idToken = params.get("id_token");
-        if (!idToken) return;
+        const handleAuthFlow = async () => {
+            const hash = window.location.hash.slice(1);
+            const params = new URLSearchParams(hash);
+            const idToken = params.get("id_token");
+            if (!idToken) return;
 
-        const { nonce } = jwtDecode<{nonce:string}>(idToken); // Get back our nonce :contentReference[oaicite:9]{index=9}
-        console.log("Nonce resp: ", nonce, " -params: ", params)
-        const hex = sha256(nonce);
+            try {
+                // 2.1 Exchange Google ID token for app JWT
+                const loginRes = await axios.post(
+                    `${process.env.NEXT_PUBLIC_TRACKIT_API_HOST}/user/auth/login`,
+                    { id_token: idToken }
+                );
+                const appJwt = loginRes.data.jwt_token;
 
-        // 2. Convert hex into a 32-byte Uint8Array
-        const seed = hexToBytes(hex);
-        const keypair = Ed25519Keypair.fromSecretKey(seed);
+                // 2.2 Store JWT and retrieve Sui wallet address
+                const { email } = jwtDecode<{ email: string }>(idToken);
+                console.log("Email zk request: ", email)
+                const storeRes = await axios.post(
+                    `${process.env.NEXT_PUBLIC_TRACKIT_API_HOST}/user/auth/store`,
+                    { 
+                        id_token: idToken, 
+                        email: email
+                    },
+                    { headers: { Authorization: `Bearer ${appJwt}` } },
+                );
 
-        setAddress(keypair.toSuiAddress());        
-    }, [])
+                // 2.3 Set derived address from server
+                setAddress(storeRes.data.wallet);
+            } catch (err) {
+                console.error("Auth API error:", err);
+            }
+        };
+
+        handleAuthFlow();
+    }, []);
 
     // Render login or logout UI
     if (address) {
