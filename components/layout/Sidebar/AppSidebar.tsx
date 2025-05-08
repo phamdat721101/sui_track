@@ -3,14 +3,11 @@
 import { cn } from "../../../lib/utils";
 import {
   Menu,
-  SlidersVerticalIcon,
-  LogOutIcon,
   FlameIcon,
   UsersIcon,
   ChartColumnIncreasingIcon,
   DatabaseIcon,
   FileChartColumnIncreasingIcon,
-  LogInIcon,
   NewspaperIcon,
   SendIcon,
   ViewIcon,
@@ -23,19 +20,8 @@ import {
   MessageCircle,
   Gamepad2Icon,
 } from "lucide-react";
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-  SheetTrigger,
-} from "../../ui/Sheet";
-import {
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarMenu,
-  SidebarGroup,
-  SidebarSeparator,
-} from "../../ui/sidebar";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "../../ui/Sheet";
+import { SidebarMenuButton, SidebarMenuItem, SidebarMenu, SidebarGroup, SidebarSeparator } from "../../ui/sidebar";
 import { VisuallyHidden, Root } from "@radix-ui/react-visually-hidden";
 import Image from "next/image";
 import Link from "next/link";
@@ -340,8 +326,8 @@ const mainNav = [
   },
   {
     icon: <UsersIcon />,
-    name: "New Pair",
-    url: "/new-pair",
+    name: "Portfolio",
+    url: "/portfolio",
     content: "Add and track a newly created token pair on the platform.",
   },
   {

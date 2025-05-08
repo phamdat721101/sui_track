@@ -364,3 +364,13 @@ export interface TetrisScore {
   created_at: string;
   updated_at: string;
 }
+
+export interface Position {
+  symbol: string;
+  icon: string;
+  balance: number;
+  valueUSD: number;
+  avgPrice: number;
+  pnl: number;
+  acquiredAt?: string;
+}

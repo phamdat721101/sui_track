@@ -8,7 +8,7 @@ export default function Page() {
   const { setSelectedNav } = useContext(GlobalContext);
 
   useEffect(() => {
-    setSelectedNav("New Pair");
+    setSelectedNav("Portfolio");
   }, []);
   return <Tutorials />;
 }
