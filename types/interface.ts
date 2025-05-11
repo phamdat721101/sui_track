@@ -374,3 +374,10 @@ export interface Position {
   pnl: number;
   acquiredAt?: string;
 }
+
+export interface LiquidityPosition {
+  pool: string;
+  lpTokens: number;
+  valueUSD: number;
+  apr: number;
+}
