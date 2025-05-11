@@ -23,16 +23,16 @@ const COLORS = ["#8884d8", "#82ca9d", "#ffc658", "#00C49F", "#FF8042", "#FF6384"
 
 // Dummy positions for demo
 const dummyData: Position[] = [
-  { symbol: "ETH", icon: "/icons/eth.png", balance: 1.5, valueUSD: 4500, avgPrice: 3000, pnl: 20, acquiredAt: "2025-01-01T00:00:00Z" },
-  { symbol: "BTC", icon: "/icons/btc.png", balance: 0.1, valueUSD: 4000, avgPrice: 50000, pnl: -5, acquiredAt: "2025-02-15T00:00:00Z" },
+  { symbol: "SUI", icon: "/icons/eth.png", balance: 1.5, valueUSD: 4500, avgPrice: 3000, pnl: 20, acquiredAt: "2025-01-01T00:00:00Z" },
+  { symbol: "FLOWX", icon: "/icons/btc.png", balance: 0.1, valueUSD: 4000, avgPrice: 50000, pnl: -5, acquiredAt: "2025-02-15T00:00:00Z" },
   { symbol: "USDC", icon: "/icons/usdc.png", balance: 2000, valueUSD: 2000, avgPrice: 1, pnl: 0, acquiredAt: "2025-03-01T00:00:00Z" },
-  { symbol: "LINK", icon: "/icons/link.png", balance: 25, valueUSD: 500, avgPrice: 20, pnl: 15, acquiredAt: "2025-04-01T00:00:00Z" }
+  { symbol: "BTC", icon: "/icons/link.png", balance: 25, valueUSD: 500, avgPrice: 20, pnl: 15, acquiredAt: "2025-04-01T00:00:00Z" }
 ];
 
 // Dummy liquidity for demo
 const dummyLiquidity: LiquidityPosition[] = [
-  { pool: "ETH/USDC", lpTokens: 12.42, valueUSD: 1800, apr: 5.2 },
-  { pool: "BTC/ETH", lpTokens: 3.14, valueUSD: 1200, apr: 4.7 },
+  { pool: "SUI/USDC", lpTokens: 12.42, valueUSD: 1800, apr: 5.2 },
+  { pool: "WAL/SUI", lpTokens: 3.14, valueUSD: 1200, apr: 4.7 },
 ];
 
 export default function Portfolio() {
@@ -240,22 +240,36 @@ export default function Portfolio() {
         )}
 
         {txDigest && (
-          <div className="fixed bottom-6 right-6 bg-[#132d5b] text-white px-5 py-4 rounded-lg shadow-lg z-50 max-w-xs">
-            <p className="font-semibold text-sm">Transaction Submitted!</p>
-            <a
-              href={`https://suiscan.xyz/testnet/tx/${txDigest}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline text-sm mt-1 block"
-            >
-              View on Sui Explorer
-            </a>
-            <button
-              onClick={() => setTxDigest(null)}
-              className="mt-2 text-xs hover:underline"
-            >
-              Close
-            </button>
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-[#132d5b] p-6 rounded-2xl shadow-xl flex flex-col items-center">
+              {/* Pulsing ring + badge image */}
+              <div className="relative mb-4">
+                <div className="absolute inset-0 animate-ping rounded-full border-2 border-white"></div>
+                <Image
+                  src="/badge_nft.png"
+                  alt="Your NFT Badge"
+                  width={120}
+                  height={120}
+                  className="rounded-full border-2 border-white relative"
+                />
+              </div>
+
+              <p className="text-white font-semibold mb-2">🎉 NFT Badge Minted!</p>
+              <a
+                href={`https://suiscan.xyz/testnet/tx/${txDigest}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline text-sm text-blue-200 mb-4"
+              >
+                View on Sui Explorer
+              </a>
+              <Button
+                onClick={() => setTxDigest(null)}
+                className="bg-white text-[#132d5b] px-6"
+              >
+                Close
+              </Button>
+            </div>
           </div>
         )}
 
