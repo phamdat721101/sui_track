@@ -11,7 +11,7 @@ import AnalyzeDialog from "./AnalyzeDialog";
 
 export default function Home() {
   const { selectedChain } = useContext(GlobalContext);
-  const [selectedTab, setSelectedTab] = useState("Token");
+  const [selectedTab, setSelectedTab] = useState("Pool");
   const [selectedDex, setSelectedDex] = useState("Move.Fun");
   const [showAnalyze, setShowAnalyze] = useState<boolean>(false);
 

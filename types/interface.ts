@@ -366,18 +366,43 @@ export interface TetrisScore {
 }
 
 export interface Position {
+  coin_type: string;
   symbol: string;
-  icon: string;
-  balance: number;
-  valueUSD: number;
-  avgPrice: number;
-  pnl: number;
-  acquiredAt?: string;
+  verified: boolean;
+  price: string;
+  usd_value: number;
+  amount: number;
+  pnl_today: string;
+  pnl_percent_today: number;
+  url: string;
 }
 
 export interface LiquidityPosition {
-  pool: string;
-  lpTokens: number;
-  valueUSD: number;
-  apr: number;
+  protocol: string;
+  coin_a_type: string;
+  coin_a_url: string;
+  coin_a_symbol: string;
+  coin_b_type: string;
+  coin_b_symbol: string;
+  coin_b_url: string;
+  amount_a: number;
+  amount_b: number;
+  a_usd_value: number;
+  b_usd_value: number;
+  pnl_today: string;
+  pnl_percent_today: number;
+  position_id: string;
+  pool_id: string;
+  active: boolean;
+  fee_a: number;
+  fee_b: number;
+  fee_a_usd_value: number;
+  fee_b_usd_value: number;
+  rewards: Array<{
+    coin_type: string;
+    coin_url: string;
+    coin_symbol: string;
+    reward: number;
+    reward_usd_value: number;
+  }>;
 }

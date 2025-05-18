@@ -5,9 +5,6 @@ import {
   Menu,
   FlameIcon,
   UsersIcon,
-  ChartColumnIncreasingIcon,
-  DatabaseIcon,
-  FileChartColumnIncreasingIcon,
   NewspaperIcon,
   SendIcon,
   ViewIcon,
@@ -321,7 +318,7 @@ const chains = [
 const mainNav = [
   {
     icon: <FlameIcon />,
-    name: "List Token",
+    name: "Explore",
     url: "/",
   },
   {
@@ -329,24 +326,6 @@ const mainNav = [
     name: "Portfolio",
     url: "/portfolio",
     content: "Add and track a newly created token pair on the platform.",
-  },
-  {
-    icon: <ChartColumnIncreasingIcon />,
-    name: "Trending",
-    url: "/trending",
-    content: "View top-trending tokens based on volume and social mentions.",
-  },
-  {
-    icon: <DatabaseIcon />,
-    name: "Holding",
-    url: "/holding",
-    content: "Monitor your current holdings and portfolio performance.",
-  },
-  {
-    icon: <FileChartColumnIncreasingIcon />,
-    name: "Follow",
-    url: "/follow",
-    content: "Follow specific tokens or wallets for real-time updates.",
   },
   {
     icon: <CpuIcon />,

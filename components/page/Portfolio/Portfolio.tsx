@@ -2,258 +2,402 @@
 
 import { useEffect, useState } from "react";
 import { ScrollArea, ScrollBar } from "../../ui/scroll-area";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "../../ui/Table";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "../../ui/Table";
 import { Button } from "../../ui/Button";
 import { Loader2 } from "lucide-react";
 import usePortfolioData from "../../../hooks/usePortfolioData";
 import { Position, LiquidityPosition } from "../../../types/interface";
-
 import { formatVolume } from "../../../types/helper";
-import { formatDistanceToNowStrict } from "date-fns";
 import Image from "next/image";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
 
-// Sui wallet integration imports
-import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
-import { Transaction } from '@mysten/sui/transactions';
+import { useCurrentAccount } from "@mysten/dapp-kit";
+import { Transaction } from "@mysten/sui/transactions";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
-import { getFullnodeUrl, SuiClient } from '@mysten/sui/client';
+import { getFullnodeUrl, SuiClient } from "@mysten/sui/client";
 
-const COLORS = ["#8884d8", "#82ca9d", "#ffc658", "#00C49F", "#FF8042", "#FF6384"];
-
-// Dummy positions for demo
-const dummyData: Position[] = [
-  { symbol: "SUI", icon: "/icons/eth.png", balance: 1.5, valueUSD: 4500, avgPrice: 3000, pnl: 20, acquiredAt: "2025-01-01T00:00:00Z" },
-  { symbol: "FLOWX", icon: "/icons/btc.png", balance: 0.1, valueUSD: 4000, avgPrice: 50000, pnl: -5, acquiredAt: "2025-02-15T00:00:00Z" },
-  { symbol: "USDC", icon: "/icons/usdc.png", balance: 2000, valueUSD: 2000, avgPrice: 1, pnl: 0, acquiredAt: "2025-03-01T00:00:00Z" },
-  { symbol: "BTC", icon: "/icons/link.png", balance: 25, valueUSD: 500, avgPrice: 20, pnl: 15, acquiredAt: "2025-04-01T00:00:00Z" }
+const COLORS = [
+  "#8884d8",
+  "#82ca9d",
+  "#ffc658",
+  "#00C49F",
+  "#FF8042",
+  "#FF6384",
 ];
 
-// Dummy liquidity for demo
-const dummyLiquidity: LiquidityPosition[] = [
-  { pool: "SUI/USDC", lpTokens: 12.42, valueUSD: 1800, apr: 5.2 },
-  { pool: "WAL/SUI", lpTokens: 3.14, valueUSD: 1200, apr: 4.7 },
-];
+// Base API URL from env
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://api.noodles.fi/api/v1";
 
 export default function Portfolio() {
   const currentAccount = useCurrentAccount();
   const walletAddress = currentAccount?.address;
-  const { data: fetchedData, isLoading, hasMore, loadMore } = usePortfolioData(walletAddress);
 
+  // Locally entered address to query
+  const [address, setAddress] = useState<string>("");
+
+  // Loading & error states for fetches
+  const [loadingData, setLoadingData] = useState<boolean>(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  // Fetched holdings & LPs
+  const [tokenHoldings, setTokenHoldings] = useState<Position[]>([]);
+  const [liquidityPositions, setLiquidityPositions] = useState<LiquidityPosition[]>([]);
+
+  // NFT badge state & portfolio review
   const [txDigest, setTxDigest] = useState<string | null>(null);
-  const [isProcessingMobile, setIsProcessingMobile] = useState(false);
-
-  const data = fetchedData.length > 0 ? fetchedData : dummyData;
-
-  // State for liquidity positions
-  const [liquidityPositions] = useState<LiquidityPosition[]>(dummyLiquidity);
-
-  // State for review & recommendations
+  const [isProcessing, setIsProcessing] = useState(false);
   const [score, setScore] = useState<number | null>(null);
   const [recommendations, setRecommendations] = useState<string[]>([]);
 
-  useEffect(() => {
-    if (walletAddress) {
-      loadMore();
+  // On address submit, fetch from API
+  const fetchPortfolio = async (addr: string) => {
+    setLoadingData(true);
+    setFetchError(null);
+    try {
+      const [coinsRes, lpsRes] = await Promise.all([
+        fetch(`${API_BASE}/portfolio/coins?address=${addr}`),
+        fetch(`${API_BASE}/portfolio/lps?address=${addr}`),
+      ]);
+      if (!coinsRes.ok || !lpsRes.ok) {
+        throw new Error(`API error: coins ${coinsRes.status}, lps ${lpsRes.status}`);
+      }
+      const coinsBody = await coinsRes.json();
+      const lpsBody = await lpsRes.json();
+      // API returns { data: [...] }
+      setTokenHoldings(coinsBody.data);
+      setLiquidityPositions(lpsBody.data);
+    } catch (e: any) {
+      setFetchError(e.message || "Fetch failed");
+    } finally {
+      setLoadingData(false);
     }
-  }, [walletAddress]);
+  };
 
+  // Automatic fetch on paste / address change
+  useEffect(() => {
+    if (
+      address.trim() &&
+      !loadingData &&
+      tokenHoldings.length === 0 &&
+      liquidityPositions.length === 0 &&
+      !fetchError
+    ) {
+      fetchPortfolio(address.trim());
+    }
+  }, [address]);
+
+  // Handle address form submit (kept for manual submit fallback)
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (address.trim()) {
+      fetchPortfolio(address.trim());
+    }
+  };
+
+  // Portfolio review logic
   const handleReviewPortfolio = () => {
-    const tokenValue = data.reduce((sum, t) => sum + t.valueUSD, 0);
-    const lpValue = liquidityPositions.reduce((sum, lp) => sum + lp.valueUSD, 0);
-    const total = tokenValue + lpValue;
-    const calculatedScore = total > 0 ? Math.round((tokenValue / total) * 100) : 0;
-    setScore(calculatedScore);
+    const totalTokens = tokenHoldings.reduce((sum, t) => sum + t.usd_value * t.amount, 0);
+    const totalLP = liquidityPositions.reduce(
+      (sum, lp) => sum + lp.a_usd_value + lp.b_usd_value,
+      0
+    );
+    const total = totalTokens + totalLP;
+    const pct = total > 0 ? Math.round((totalTokens / total) * 100) : 0;
+    setScore(pct);
     setRecommendations([
-      calculatedScore < 50
-        ? 'Consider increasing your liquidity positions.'
-        : 'Nice balance of tokens and liquidity!',
-      'Review pools with APR above 5% for potential yields.'
+      pct < 50
+        ? "Consider shifting into more liquidity positions."
+        : "Great balance between tokens and liquidity!",
+      "Check positions with high fees or low rewards.",
     ]);
   };
 
   const handleMintBadge = async () => {
-    setIsProcessingMobile(true); 
-    const mnemonic = process.env.NEXT_PUBLIC_MNE || '';
+    setIsProcessing(true);
+    const mnemonic = process.env.NEXT_PUBLIC_MNE || "";
     const keypair = Ed25519Keypair.deriveKeypair(mnemonic);
-    const client = new SuiClient({ url: getFullnodeUrl('testnet') });
+    const client = new SuiClient({ url: getFullnodeUrl("testnet") });
     const tx = new Transaction();
+    const pkg = "0x5613e7f924cb9cd8e7607fd208f463876fe6f8099f75403d10f667bd06bfeabf";
 
-    const packageAdr = "0x5613e7f924cb9cd8e7607fd208f463876fe6f8099f75403d10f667bd06bfeabf";
-    const address = keypair.getPublicKey().toSuiAddress();
-    tx.setSender(address);
+    tx.setSender(keypair.getPublicKey().toSuiAddress());
     tx.setGasBudget(10000000);
-
     tx.moveCall({
-      target: `${packageAdr}::badge_nft::mint_project_nft`,
+      target: `${pkg}::badge_nft::mint_project_nft`,
       arguments: [
-          tx.pure.string("My Project"),                         // name
-          tx.pure.string("Project description"),               // description
-          tx.pure.string("https://project.url"),               // url
-          tx.pure.u64(100),                               // target_transactions
-          tx.pure.string("animal-id-1"),                       // theme_animal_id
-          tx.pure.string("Lion"),                              // theme_animal_name
-          tx.pure.string("https://animal.image/url.png"),      // theme_animal_image
-          tx.pure.string("icon"),                    // theme_animal_icon
-          tx.pure.string("icon"),                   // theme_animal_icon2
-          tx.pure.u64(1),                                 // theme_animal_level
-          tx.pure.u64(5),                                 // theme_animal_max_level
+        tx.pure.string("My Project"),
+        tx.pure.string("Project description"),
+        tx.pure.string("https://project.url"),
+        tx.pure.u64(100),
+        tx.pure.string("animal-id-1"),
+        tx.pure.string("Lion"),
+        tx.pure.string("https://animal.image/url.png"),
+        tx.pure.string("icon"),
+        tx.pure.string("icon"),
+        tx.pure.u64(1),
+        tx.pure.u64(5),
       ],
       typeArguments: [],
     });
 
     const { bytes, signature } = await tx.sign({ client, signer: keypair });
-
-    const result = await client.executeTransactionBlock({
+    const res = await client.executeTransactionBlock({
       transactionBlock: bytes,
       signature,
       options: { showEffects: true },
-      requestType: 'WaitForLocalExecution',
+      requestType: "WaitForLocalExecution",
     });
-
-    setTxDigest(result.digest);
-    setIsProcessingMobile(false);
+    setTxDigest(res.digest);
+    setIsProcessing(false);
   };
 
-  const renderTable = () => (
-    <>      
-      <Table className="table-auto bg-transparent">
-        {/* existing table code */}
-      </Table>
-      <ScrollBar orientation="horizontal" />
-      {hasMore && !isLoading && (
-        <div className="flex justify-center p-4 border-t border-[#132D5B]">
-          <Button size="lg" className="bg-[#132d5b] text-white border border-gray-700 hover:bg-[#1a3c73]" onClick={loadMore}>
-            Load More
-          </Button>
-        </div>
-      )}
-    </>
-  );
+  // Prompt for address
+  if (!address) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64">
+        <Loader2 className="animate-spin mb-4" />
+        <form onSubmit={handleSubmit} className="flex space-x-2">
+          <input
+            type="text"
+            placeholder="Enter wallet address"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            className="px-4 py-2 border rounded"
+          />
+          <Button type="submit">Load</Button>
+        </form>
+      </div>
+    );
+  }
+
+  // Show fetching spinner
+  if (loadingData) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 animate-pulse">
+        <Loader2 className="animate-spin mb-4" />
+        <p className="text-gray-200">Fetching portfolio…</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="w-full flex justify-center px-2">
-      <div className="flex-1 max-w-5xl">
-
-        {/* Token Portfolio Chart */}
-        {!isLoading && data.length > 0 && (
-          <div className="mb-6 bg-[#0e203f] p-4 rounded-xl">
-            <h2 className="text-white text-lg font-semibold mb-2">Token Allocation</h2>
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={data}
-                  dataKey="valueUSD"
-                  nameKey="symbol"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  fill="#8884d8"
-                  label
-                >
-                  {data.map((entry, index) => (
-                    <Cell key={`token-cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value: any) => `$${formatVolume(value)}`} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-
-        {/* Liquidity Portfolio Chart */}
-        {!isLoading && liquidityPositions.length > 0 && (
-          <div className="mb-6 bg-[#0e203f] p-4 rounded-xl">
-            <h2 className="text-white text-lg font-semibold mb-2">Liquidity Allocation</h2>
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={liquidityPositions.map(lp => ({ name: lp.pool, value: lp.valueUSD }))}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  fill="#82ca9d"
-                  label
-                >
-                  {liquidityPositions.map((entry, index) => (
-                    <Cell key={`lp-cell-${index}`} fill={COLORS[(index+data.length) % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value: any) => `$${formatVolume(value)}`} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-
-        {/* Liquidity Positions Table */}
-        <div className="mb-6 bg-[#0e203f] p-4 rounded-xl">
-          <h2 className="text-white text-lg font-semibold mb-2">Liquidity Positions</h2>
-          <Table className="table-auto bg-transparent">
-            <TableHeader className="sticky top-0 bg-[#0e203f]">
-              <TableRow>
-                <TableHead>Pool</TableHead><TableHead>LP Tokens</TableHead><TableHead>Value (USD)</TableHead><TableHead>APR %</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {liquidityPositions.map((lp, idx) => (
-                <TableRow key={idx} className="group hover:bg-blue-900 transition-colors duration-150">
-                  <TableCell>{lp.pool}</TableCell>
-                  <TableCell>{lp.lpTokens}</TableCell>
-                  <TableCell>${formatVolume(lp.valueUSD)}</TableCell>
-                  <TableCell className={lp.apr >= 0 ? "text-green-500" : "text-red-500"}>{lp.apr}%</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+    <div className="w-full flex justify-center px-2 py-4">
+      <div className="flex-1 max-w-5xl space-y-4">
+        {/* Scan New Address */}
+        <div className="flex justify-end">
+          <Button size="sm" variant="ghost" onClick={() => {
+            setAddress("");
+            setTokenHoldings([]);
+            setLiquidityPositions([]);
+            setFetchError(null);
+            setScore(null);
+          }}>
+            Scan New Address
+          </Button>
         </div>
 
-        {/* Desktop Portfolio Table */}
-        <div className="hidden md:block">
-          <ScrollArea className="w-full h-full">
-            {renderTable()}
+        {fetchError && (
+          <div className="text-red-400">Error loading portfolio: {fetchError}</div>
+        )}
+
+        {/* Token Allocation Chart */}
+        <div className="bg-[#0e203f] p-4 rounded-xl">
+          <h2 className="text-white text-xl font-semibold mb-2">Token Allocation</h2>
+          <ResponsiveContainer width="100%" height={200}>
+            <PieChart>
+              <Pie
+                data={tokenHoldings}
+                dataKey="usd_value"
+                nameKey="symbol"
+                cx="50%"
+                cy="50%"
+                outerRadius={60}
+                label
+              >
+                {tokenHoldings.map((_, i) => (
+                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip formatter={(v: any) => `$${formatVolume(v)}`} />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Liquidity Allocation Chart */}
+        <div className="bg-[#0e203f] p-4 rounded-xl">
+          <h2 className="text-white text-xl font-semibold mb-2">Liquidity Allocation</h2>
+          <ResponsiveContainer width="100%" height={200}>
+            <PieChart>
+              <Pie
+                data={liquidityPositions.map((lp) => ({
+                  name: `${lp.coin_a_symbol}/${lp.coin_b_symbol}`,
+                  value: lp.a_usd_value + lp.b_usd_value,
+                }))}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                outerRadius={60}
+                label
+              >
+                {liquidityPositions.map((_, i) => (
+                  <Cell
+                    key={i}
+                    fill={COLORS[(i + tokenHoldings.length) % COLORS.length]}
+                  />
+                ))}
+              </Pie>
+              <Tooltip formatter={(v: any) => `$${formatVolume(v)}`} />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Token Holdings Table */}
+        <div className="bg-[#0e203f] p-4 rounded-xl">
+          <h2 className="text-white text-xl font-semibold mb-2">Token Holdings</h2>
+          <ScrollArea className="h-64 md:h-96">
+            <Table className="text-sm md:text-base">
+              <TableHeader className="sticky top-0 bg-[#0e203f] z-10">
+                <TableRow>
+                  <TableHead>Token</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>USD Value</TableHead>
+                  <TableHead>24h PnL</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {tokenHoldings.map((t, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="flex items-center gap-2">
+                      <Image src={t.url} width={24} height={24} alt={t.symbol} unoptimized/>
+                      {t.symbol}
+                    </TableCell>
+                    <TableCell>{t.amount}</TableCell>
+                    <TableCell>${formatVolume(t.usd_value * t.amount)}</TableCell>
+                    <TableCell
+                      className={
+                        t.pnl_percent_today >= 0 ? "text-green-500" : "text-red-500"
+                      }
+                    >
+                      {t.pnl_today} ({t.pnl_percent_today}%)
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <ScrollBar orientation="horizontal" />
           </ScrollArea>
         </div>
 
-        {/* Mobile Portfolio Cards */}
-        <div className="md:hidden space-y-4">
-          {/* existing mobile cards code */}
+        {/* Liquidity Positions Table */}
+        <div className="bg-[#0e203f] p-4 rounded-xl">
+          <h2 className="text-white text-xl font-semibold mb-2">Liquidity Positions</h2>
+          <ScrollArea className="h-64 md:h-96">
+            <Table className="text-sm md:text-base">
+              <TableHeader className="sticky top-0 bg-[#0e203f] z-10">
+                <TableRow>
+                  <TableHead>Pool</TableHead>
+                  <TableHead>A Amount</TableHead>
+                  <TableHead>B Amount</TableHead>
+                  <TableHead>USD Total</TableHead>
+                  <TableHead>24h PnL</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {liquidityPositions.map((lp, i) => (
+                  <TableRow key={i}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Image
+                          src={lp.coin_a_url}
+                          width={20}
+                          height={20}
+                          alt={lp.coin_a_symbol}
+                          unoptimized
+                        />
+                        <Image
+                          src={lp.coin_b_url}
+                          width={20}
+                          height={20}
+                          alt={lp.coin_b_symbol}
+                          unoptimized
+                        />
+                        {lp.coin_a_symbol}/{lp.coin_b_symbol}
+                      </div>
+                    </TableCell>
+                    <TableCell>{lp.amount_a.toFixed(2)}</TableCell>
+                    <TableCell>{lp.amount_b.toFixed(2)}</TableCell>
+                    <TableCell>
+                      ${formatVolume(lp.a_usd_value + lp.b_usd_value)}
+                    </TableCell>
+                    <TableCell
+                      className={
+                        lp.pnl_percent_today >= 0 ? "text-green-500" : "text-red-500"
+                      }
+                    >
+                      {lp.pnl_today} ({lp.pnl_percent_today}%)
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex space-x-4 my-4 justify-center">
-          <Button onClick={handleReviewPortfolio}>Review Portfolio</Button>
-          <Button variant="secondary" onClick={handleMintBadge}>Mint NFT Badge</Button>
+        <div className="flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0 my-4 justify-center">
+          <Button className="w-full sm:w-auto" onClick={handleReviewPortfolio}>
+            Review Portfolio
+          </Button>
+          <Button
+            className="w-full sm:w-auto"
+            variant="secondary"
+            onClick={handleMintBadge}
+          >
+            Mint NFT Badge
+          </Button>
         </div>
 
-        {/* Score & Recommendations */}
-        {score !== null && (
-          <div className="bg-[#0e203f] p-4 rounded-lg">
-            <h3 className="text-white font-semibold mb-2">Portfolio Score: {score}/100</h3>
-            <ul className="list-disc list-inside text-gray-200">
-              {recommendations.map((rec, i) => <li key={i}>{rec}</li>)}
-            </ul>
+        {/* Spinner & Modal (unchanged) */}
+        {isProcessing && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg flex flex-col items-center">
+              <Loader2 className="w-8 h-8 animate-spin mb-2" />
+              <p className="text-gray-700">Processing transaction…</p>
+            </div>
           </div>
         )}
-
         {txDigest && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-[#132d5b] p-6 rounded-2xl shadow-xl flex flex-col items-center">
-              {/* Pulsing ring + badge image */}
               <div className="relative mb-4">
                 <div className="absolute inset-0 animate-ping rounded-full border-2 border-white"></div>
                 <Image
                   src="/badge_nft.png"
-                  alt="Your NFT Badge"
+                  alt="NFT Badge"
                   width={120}
                   height={120}
-                  className="rounded-full border-2 border-white relative"
+                  className="rounded-full border-2 border-white"
+                  unoptimized
                 />
               </div>
-
               <p className="text-white font-semibold mb-2">🎉 NFT Badge Minted!</p>
               <a
                 href={`https://suiscan.xyz/testnet/tx/${txDigest}`}
@@ -273,15 +417,17 @@ export default function Portfolio() {
           </div>
         )}
 
-        {isProcessingMobile && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-            <div className="bg-white p-6 rounded-lg flex flex-col items-center">
-              <Loader2 className="w-8 h-8 animate-spin mb-2" />
-              <p className="text-gray-700">Processing transaction…</p>
-            </div>
+        {/* Portfolio Score */}
+        {score !== null && (
+          <div className="bg-[#0e203f] p-4 rounded-lg text-white">
+            <h3 className="font-semibold mb-2">Portfolio Score: {score}%</h3>
+            <ul className="list-disc list-inside">
+              {recommendations.map((rec, i) => (
+                <li key={i}>{rec}</li>
+              ))}
+            </ul>
           </div>
         )}
-
       </div>
     </div>
   );

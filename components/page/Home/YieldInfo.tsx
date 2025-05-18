@@ -1,5 +1,4 @@
 import { Card } from "../../ui/Card";
-import { Badge } from "../../ui/badge";
 import {
   ChevronRight,
   Clock4,

@@ -2,12 +2,11 @@
 import { useState } from "react";
 import { TokenAnalysisForm } from "./TokenAnalysisForm";
 import { TokenAnalysis } from "@/types/interface";
-import { BarChart, LineChart, Shield, SquareChartGantt } from "lucide-react";
+import { LineChart, Shield, SquareChartGantt } from "lucide-react";
 import { DataChart } from "./DataChart";
 import { TokenMetricCard } from "./TokenMetricCard";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "../../ui/Button";
-import axios from "axios";
 import { formatAddress } from "../../../types/helper";
 
 export default function Page() {
@@ -18,7 +17,7 @@ export default function Page() {
   const [isSuccess, setIsSuccess] = useState<boolean | undefined>();
   const [txHash, setTxHash] = useState<string | undefined>();
   const [input, setInput] = useState({
-    tokenAddress: "0x1::aptos_coin::AptosCoin",
+    tokenAddress: "0x2::sui::SUI",
     days: 7,
   });
 
