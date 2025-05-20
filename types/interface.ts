@@ -271,7 +271,7 @@ interface Gauge {
 
 export interface Pool {
   pool: {
-    _id: string;
+    pool_id: string;
     name: string;
     symbol: string;
     address: string;

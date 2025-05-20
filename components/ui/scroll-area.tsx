@@ -45,4 +45,6 @@ const ScrollBar = React.forwardRef<
 ));
 ScrollBar.displayName = ScrollAreaPrimitive.ScrollAreaScrollbar.displayName;
 
+// Expose the underlying Viewport component for scroll event handling
+export const ScrollAreaViewport = ScrollAreaPrimitive.Viewport;
 export { ScrollArea, ScrollBar };
