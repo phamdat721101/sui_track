@@ -40,11 +40,7 @@ export default function Pools() {
   const [openDropdown, setOpenDropdown] = useState<null | 'strategy' | 'platform' | 'token'>(null);
 
   // Highlight "All" when in reset state
-  const isAllActive =
-    strategyFilter.length === 0 &&
-    platformFilter.length === 1 &&
-    platformFilter[0] === 'flowx' &&
-    tokenFilter.length === 0;
+  const isAllActive = true
 
   const [txDigest, setTxDigest] = useState<string | null>(null);
   const [isProcessingMobile, setIsProcessingMobile] = useState(false);
@@ -137,20 +133,21 @@ export default function Pools() {
 
   // Combined multi‑filter
   const visiblePools = useMemo(() => {
-    return poolData.filter(item => {
-      const byStrategy =
-        strategyFilter.length === 0 ||
-        strategyFilter.some(s =>
-          item.pool.name.toLowerCase().includes(s)
-        );
-      const byPlatform =
-        platformFilter.length === 0 ||
-        platformFilter.includes(item.pool.name.toLowerCase());
-      const byToken =
-        tokenFilter.length === 0 ||
-        tokenFilter.includes(item.pool.symbol.toLowerCase());
-      return byStrategy && byPlatform && byToken;
-    });
+    // return poolData.filter(item => {
+    //   const byStrategy =
+    //     strategyFilter.length === 0 ||
+    //     strategyFilter.some(s =>
+    //       item.pool.name.toLowerCase().includes(s)
+    //     );
+    //   const byPlatform =
+    //     platformFilter.length === 0 ||
+    //     platformFilter.includes(item.pool.name.toLowerCase());
+    //   const byToken =
+    //     tokenFilter.length === 0 ||
+    //     tokenFilter.includes(item.pool.symbol.toLowerCase());
+    //   return byStrategy && byPlatform && byToken;
+    // });
+    return poolData;
   }, [poolData, strategyFilter, platformFilter, tokenFilter]);
 
   const chartData = useMemo(() => {
@@ -171,9 +168,7 @@ export default function Pools() {
           {/* All Pill */}
           <Button
             onClick={() => {
-              setStrategyFilter([]);
               setPlatformFilter(['flowx']);
-              setTokenFilter([]);
             }}
             className={`px-4 py-2 rounded-full ${
               isAllActive ? 'bg-gold text-black' : 'bg-[#1a243b] text-gray-400'
@@ -251,14 +246,14 @@ export default function Pools() {
             <Button
               className="px-4 py-2 bg-[#1a243b] text-gray-200 rounded flex items-center"
               onClick={() =>
-                setOpenDropdown(openDropdown === 'platform' ? null : 'platform')
+                setOpenDropdown(openDropdown === 'token' ? null : 'token')
               }
             >
-              {platformFilter.length
-                ? platformFilter
+              {tokenFilter.length
+                ? tokenFilter
                     .map(p => p.charAt(0).toUpperCase() + p.slice(1))
                     .join(', ')
-                : 'Platform'}
+                : 'Token'}
               <ChevronDown className="ml-2" size={16} />
             </Button>
             {openDropdown === 'token' && (
